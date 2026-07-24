@@ -5,7 +5,7 @@ The standard, enterprise-grade development environment for every BAOBAB
 Enterprise Platform engineer, maintained by **Nabhold Group Africa —
 Platform Engineering**.
 
-Published image: `ghcr.io/nabhold/baobab-devcontainer`
+Published image: `ghcr.io/nabhold/baobab-dev`
 
 ---
 
@@ -83,7 +83,7 @@ Requires Docker with BuildKit (Docker Desktop / Docker Engine ≥ 23, or
 # Single-arch, local test build (fast, native arch only)
 docker buildx build \
   --load \
-  --tag baobab-devcontainer:dev \
+  --tag baobab-dev:dev \
   .
 
 # Multi-arch build (what CI does) — requires a buildx builder with the
@@ -92,7 +92,7 @@ docker buildx build \
 docker buildx create --use --name baobab-builder 2>/dev/null || docker buildx use baobab-builder
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --tag ghcr.io/nabhold-group-africa/baobab-devcontainer:dev \
+  --tag ghcr.io/nabhold/baobab-dev:dev \
   --push \
   .
 ```
@@ -106,7 +106,7 @@ docker buildx build --build-arg FLUTTER_VERSION=3.45.0 --load -t baobab-devconta
 ### Verifying a build
 
 ```bash
-docker run --rm baobab-devcontainer:dev baobab-verify
+docker run --rm baobab-dev:dev baobab-verify
 ```
 
 `verify.sh` exits non-zero if any **required** tool is missing/broken —
@@ -171,10 +171,10 @@ This image follows **Semantic Versioning 2.0.0** applied to the
 Published tags per release, from most to least specific:
 
 ```
-ghcr.io/nabhold-group-africa/baobab-devcontainer:1.4.0   # exact — use in production CI
-ghcr.io/nabhold-group-africa/baobab-devcontainer:1.4     # latest patch of 1.4.x
-ghcr.io/nabhold-group-africa/baobab-devcontainer:1       # latest minor/patch of 1.x.x
-ghcr.io/nabhold-group-africa/baobab-devcontainer:latest  # latest stable release overall
+ghcr.io/nabhold/baobab-dev:1.4.0   # exact — use in production CI
+ghcr.io/nabhold/baobab-dev:1.4     # latest patch of 1.4.x
+ghcr.io/nabhold/baobab-dev:1       # latest minor/patch of 1.x.x
+ghcr.io/nabhold/baobab-dev:latest  # latest stable release overall
 ```
 
 **Recommendation:** project `devcontainer.json` files should pin the exact
