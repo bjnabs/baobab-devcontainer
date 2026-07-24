@@ -1,0 +1,28 @@
+# Changelog
+
+All notable changes to the BAOBAB devcontainer image are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+versioning follows [Semantic Versioning](https://semver.org/) as described
+in `README.md § Versioning strategy`.
+
+## [1.0.0] — Baseline release
+
+### Added
+- Ubuntu 26.04 LTS base with multi-stage build (Flutter SDK stage, pinned
+  CLI-tools stage, final runtime stage).
+- Python 3.14 via deadsnakes, with pipx, uv, and Poetry (in-project venvs).
+- Node.js 24.x LTS with npm, pnpm, and yarn via Corepack.
+- Flutter (stable) + bundled Dart SDK, precached for non-mobile targets.
+- PostgreSQL 17 client and Redis CLI (client tools only).
+- Docker CLI, Compose plugin, Buildx plugin (no daemon).
+- GitHub CLI.
+- ripgrep, fd, bat, eza, fzf, tmux, bash-completion, colored prompt,
+  curated aliases, and improved history configuration.
+- Non-root `vscode` user (UID/GID 1000) with passwordless sudo.
+- `baobab-verify` and `baobab-summary` operational scripts.
+- `devcontainer.json` with VS Code extensions/settings for Python, Ruff,
+  Black, isort, mypy, Docker, Flutter/Dart, GitHub Actions, Markdown, YAML.
+- `post-create.sh` (project dependency install) and `bootstrap.sh`
+  (standalone onboarding) lifecycle scripts.
+- Multi-arch (`linux/amd64`, `linux/arm64`) GitHub Actions build/publish
+  workflow with GHCR publishing and cosign keyless signing.
