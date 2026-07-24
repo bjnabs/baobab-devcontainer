@@ -1,0 +1,148 @@
+{
+  "name": "BAOBAB Enterprise Platform",
+
+  // Pull the published, versioned image from GHCR by default. Developers
+  // working on the image itself can swap this block for the "build" block
+  // below (see README.md § Local image development) to build from source.
+  "image": "ghcr.io/nabhold-group-africa/baobab-devcontainer:1.0.0",
+
+  // --- Alternative for iterating on the image itself -----------------------
+  // "build": {
+  //   "context": "..",
+  //   "dockerfile": "../Dockerfile",
+  //   "args": { "BUILDKIT_INLINE_CACHE": "1" }
+  // },
+
+  "runArgs": [
+    "--init",
+    "--cap-add=SYS_PTRACE",
+    "--security-opt", "seccomp=unconfined"
+  ],
+
+  "containerEnv": {
+    "TZ": "UTC"
+  },
+
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind,consistency=cached",
+
+  // Mount the host's Docker socket so `docker` / `docker compose` inside the
+  // container talk to the same daemon Codespaces already provides — this is
+  // why the image ships only the Docker CLI, not a daemon.
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
+  ],
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": false
+    }
+  },
+
+  "forwardPorts": [8000, 8001, 3000, 5432, 6379, 9000, 9001, 80, 443],
+  "portsAttributes": {
+    "8000": { "label": "Django / DRF", "onAutoForward": "notify" },
+    "8001": { "label": "FastAPI", "onAutoForward": "notify" },
+    "3000": { "label": "Next.js", "onAutoForward": "openPreview" },
+    "5432": { "label": "PostgreSQL", "onAutoForward": "silent" },
+    "6379": { "label": "Redis", "onAutoForward": "silent" },
+    "9000": { "label": "MinIO API", "onAutoForward": "silent" },
+    "9001": { "label": "MinIO Console", "onAutoForward": "notify" },
+    "80":   { "label": "Traefik / Nginx (HTTP)", "onAutoForward": "silent" },
+    "443":  { "label": "Traefik / Nginx (HTTPS)", "onAutoForward": "silent" }
+  },
+
+  "onCreateCommand": "bash .devcontainer/post-create.sh --stage=on-create",
+  "postCreateCommand": "bash .devcontainer/post-create.sh --stage=post-create",
+  "postStartCommand": "baobab-summary",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.mypy-type-checker",
+        "batisteo.vscode-django",
+
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+
+        "dart-code.flutter",
+        "dart-code.dart-code",
+
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github",
+
+        "davidanson.vscode-markdownlint",
+        "redhat.vscode-yaml",
+
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+
+        "editorconfig.editorconfig",
+        "tamasfe.even-better-toml",
+        "mikestead.dotenv"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.rulers": [88, 120],
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.analysis.typeCheckingMode": "basic",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit",
+            "source.fixAll.ruff": "explicit"
+          }
+        },
+
+        "ruff.lint.args": ["--config=pyproject.toml"],
+        "mypy-type-checker.args": ["--config-file=pyproject.toml"],
+
+        "[dart]": {
+          "editor.formatOnSave": true,
+          "editor.formatOnType": true,
+          "editor.rulers": [80],
+          "editor.selectionHighlight": false,
+          "editor.suggestSelection": "first",
+          "editor.tabCompletion": "onlySnippet",
+          "editor.wordBasedSuggestions": "off"
+        },
+
+        "[javascript][typescript][typescriptreact][javascriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+
+        "[markdown]": {
+          "editor.wordWrap": "on",
+          "editor.quickSuggestions": { "comments": "off", "strings": "off", "other": "off" }
+        },
+
+        "[yaml]": {
+          "editor.defaultFormatter": "redhat.vscode-yaml"
+        },
+
+        "docker.dockerPath": "/usr/bin/docker",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}
