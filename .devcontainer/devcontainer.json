@@ -4,12 +4,12 @@
   // Pull the published, versioned image from GHCR by default. Developers
   // working on the image itself can swap this block for the "build" block
   // below (see README.md § Local image development) to build from source.
-  "image": "ghcr.io/nabhold-group-africa/baobab-devcontainer:1.0.0",
+  "image": "ghcr.io/nabhold/baobab-dev:1.0.0",
 
   // --- Alternative for iterating on the image itself -----------------------
   // "build": {
   //   "context": "..",
-  //   "dockerfile": "../Dockerfile",
+  //   "dockerfile": ".devcontainer/docker/Dockerfile",
   //   "args": { "BUILDKIT_INLINE_CACHE": "1" }
   // },
 
@@ -59,8 +59,8 @@
     "443":  { "label": "Traefik / Nginx (HTTPS)", "onAutoForward": "silent" }
   },
 
-  "onCreateCommand": "bash .devcontainer/post-create.sh --stage=on-create",
-  "postCreateCommand": "bash .devcontainer/post-create.sh --stage=post-create",
+  "onCreateCommand": "bash scripts/post-create.sh --stage=on-create",
+  "postCreateCommand": "bash scripts/post-create.sh --stage=post-create",
   "postStartCommand": "baobab-summary",
 
   "customizations": {
