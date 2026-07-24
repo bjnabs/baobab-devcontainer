@@ -116,8 +116,11 @@ jobs:
 
         with:
           context: .
-
           file: ./.devcontainer/docker/Dockerfile
+          build-args: |
+             BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+             VERSION=${{ steps.meta.outputs.version }}
+             REVISION=${{ github.sha }}
 
           platforms: ${{ matrix.platform }}
 
