@@ -4,7 +4,7 @@
 # BAOBAB Enterprise Platform — Standard Development Container
 # =============================================================================
 # Maintained by: Nabhold Group Africa — Platform Engineering
-# Registry:      ghcr.io/nabhold/baobab-devcontainer
+# Registry:      ghcr.io/nabhold/baobab-dev
 #
 # This image is the single source of truth for the BAOBAB local development
 # environment. It is built for GitHub Codespaces and Dev Containers (VS Code /
@@ -128,12 +128,19 @@ ARG PYTHON_MINOR
 ARG NODE_MAJOR
 ARG POSTGRES_MAJOR
 ARG TARGETARCH
-
-LABEL org.opencontainers.image.title="baobab-devcontainer" \
+# Build metadata supplied by GitHub Actions
+ARG BUILD_DATE
+ARG VERSION
+ARG REVISION
+  
+LABEL org.opencontainers.image.title="baobab-dev" \
       org.opencontainers.image.description="Standard development container for the BAOBAB Enterprise Platform (Nabhold Group Africa)" \
       org.opencontainers.image.vendor="Nabhold Group Africa" \
       org.opencontainers.image.source="https://github.com/nabhold/baobab-devcontainer" \
-      org.opencontainers.image.licenses="Proprietary"
+      org.opencontainers.image.licenses="Proprietary" \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.version=$VERSION \
+      org.opencontainers.image.revision=$REVISION
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
@@ -335,5 +342,12 @@ WORKDIR /workspaces
 # Poetry: create venvs inside each project directory rather than a shared
 # cache, matching the objective and keeping per-tenant-app envs isolated.
 RUN poetry config virtualenvs.in-project true
+
+HEALTHCHECK \
+    --interval=60s \
+    --timeout=10s \
+    --start-period=15s \
+    --retries=3 \
+    CMD baobab-verify || exit 1
 
 CMD ["sleep", "infinity"]
