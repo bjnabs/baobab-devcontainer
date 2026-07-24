@@ -140,7 +140,9 @@ LABEL org.opencontainers.image.title="baobab-dev" \
       org.opencontainers.image.licenses="Proprietary" \
       org.opencontainers.image.created=$BUILD_DATE \
       org.opencontainers.image.version=$VERSION \
-      org.opencontainers.image.revision=$REVISION
+      org.opencontainers.image.revision=$REVISION \
+      org.opencontainers.image.authors="Platform Engineering <platform@nabhold.com>" \
+      org.opencontainers.image.documentation="https://github.com/nabhold/baobab-devcontainer/blob/main/README.md"
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
