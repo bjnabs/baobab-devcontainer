@@ -5,7 +5,7 @@ The standard, enterprise-grade development environment for every BAOBAB
 Enterprise Platform engineer, maintained by **Nabhold Group Africa —
 Platform Engineering**.
 
-Published image: `ghcr.io/nabhold-group-africa/baobab-devcontainer`
+Published image: `ghcr.io/nabhold/baobab-devcontainer`
 
 ---
 
