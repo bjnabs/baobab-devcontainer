@@ -4,7 +4,7 @@
 # BAOBAB Enterprise Platform — Standard Development Container
 # =============================================================================
 # Maintained by: Nabhold Group Africa — Platform Engineering
-# Registry:      ghcr.io/nabhold-group-africa/baobab-devcontainer
+# Registry:      ghcr.io/nabhold/baobab-devcontainer
 #
 # This image is the single source of truth for the BAOBAB local development
 # environment. It is built for GitHub Codespaces and Dev Containers (VS Code /
@@ -132,7 +132,7 @@ ARG TARGETARCH
 LABEL org.opencontainers.image.title="baobab-devcontainer" \
       org.opencontainers.image.description="Standard development container for the BAOBAB Enterprise Platform (Nabhold Group Africa)" \
       org.opencontainers.image.vendor="Nabhold Group Africa" \
-      org.opencontainers.image.source="https://github.com/nabhold-group-africa/baobab-devcontainer" \
+      org.opencontainers.image.source="https://github.com/nabhold/baobab-devcontainer" \
       org.opencontainers.image.licenses="Proprietary"
 
 ENV DEBIAN_FRONTEND=noninteractive \
