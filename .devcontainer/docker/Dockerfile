@@ -72,7 +72,7 @@ ARG UBUNTU_VERSION
 # -----------------------------------------------------------------------------
 # Stage: flutter-sdk — fetch + prune the Flutter stable SDK
 # -----------------------------------------------------------------------------
-FROM ubuntu:26.04 AS flutter-sdk
+FROM ubuntu:${UBUNTU_VERSION} AS flutter-sdk
 ARG TARGETARCH
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -158,7 +158,7 @@ RUN set -euo pipefail; \
 # -----------------------------------------------------------------------------
 # Stage: final — the actual dev container image
 # -----------------------------------------------------------------------------
-FROM ubuntu:26.04 AS final
+FROM ubuntu:${UBUNTU_VERSION} AS final
 
 ARG TARGETARCH
 # Build metadata supplied by GitHub Actions
