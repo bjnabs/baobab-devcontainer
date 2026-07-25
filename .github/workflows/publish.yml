@@ -86,6 +86,11 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
 
       - name: Run config/resolve.sh
+        env:
+          # Authenticates resolve.sh's GitHub API lookups (task, ripgrep,
+          # fd, bat, eza, yq, gh, cosign), raising the rate limit from
+          # 60 req/hr (unauthenticated) to 5000 req/hr.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x config/resolve.sh
           ./config/resolve.sh
