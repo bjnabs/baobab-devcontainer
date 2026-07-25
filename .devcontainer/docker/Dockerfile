@@ -67,7 +67,7 @@
 
 # Base image tag only — see "UBUNTU_VERSION exception" above. Intentionally
 # has no default; CI must always supply it from config/versions.lock.
-ARG UBUNTU_VERSION
+ARG UBUNTU_VERSION=26.04
 
 # -----------------------------------------------------------------------------
 # Stage: flutter-sdk — fetch + prune the Flutter stable SDK
