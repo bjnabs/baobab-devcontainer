@@ -12,33 +12,31 @@
 # steps that need the same toolchain as developers.
 #
 # Design principles:
-#   - Deterministic: every language runtime and CLI tool version is read
-#     exclusively from config/versions.lock, a file generated OUTSIDE of
-#     Docker by config/resolve.sh. This Dockerfile never executes resolve.sh
-#     and never re-derives a version on its own — it only consumes the lock
-#     file that was produced (and committed to the build context) before
-#     `docker build` was invoked. This keeps image builds reproducible: the
-#     same versions.lock always produces the same image content.
-#   - Minimal build ARGs: the only Docker build arguments are UBUNTU_VERSION
-#     (the base image tag — see note below) and pure image metadata
-#     (VERSION, BUILD_DATE, REVISION). No tool version is ever supplied via
-#     --build-arg; they all come from versions.lock inside the build.
-#   - UBUNTU_VERSION exception: `FROM` instructions are resolved by BuildKit
-#     before the build context (and therefore versions.lock) is available,
-#     so the base image tag cannot be read from a context file the way every
-#     other tool version can. UBUNTU_VERSION is the one value that must
-#     still travel in as a build ARG. To keep versions.lock authoritative
-#     end-to-end, CI extracts UBUNTU_VERSION from versions.lock and passes
-#     it explicitly, e.g.:
-#       docker buildx build \
-#         --build-arg UBUNTU_VERSION="$(. config/versions.lock && echo "$UBUNTU_VERSION")" \
-#         --build-arg VERSION="$IMAGE_VERSION" \
-#         --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-#         --build-arg REVISION="$(git rev-parse HEAD)" \
-#         .
-#     No default is declared for UBUNTU_VERSION on purpose — a missing
-#     --build-arg should fail the build loudly rather than silently fall
-#     back to a stale, hard-coded Ubuntu release.
+#   - Deterministic: every language runtime and CLI tool version other than
+#     the Ubuntu base image is read exclusively from config/versions.lock, a
+#     file generated OUTSIDE of Docker by config/resolve.sh. This Dockerfile
+#     never executes resolve.sh and never re-derives a version on its own —
+#     it only consumes the lock file that was produced (and committed to the
+#     build context) before `docker build` was invoked. This keeps image
+#     builds reproducible: the same versions.lock always produces the same
+#     image content.
+#   - Build ARGs: VERSION, BUILD_DATE, REVISION are pure image metadata,
+#     always supplied by CI. UBUNTU_VERSION below is the one exception to
+#     "versions come only from versions.lock" (see next bullet) — it ships
+#     with a hard-coded default and normally requires no --build-arg at all.
+#   - Ubuntu base image: `FROM` instructions are resolved by BuildKit before
+#     the build context (and therefore versions.lock) is available, so the
+#     base image tag cannot be sourced from a context file the way every
+#     other tool version can. Rather than repeating a literal Ubuntu tag in
+#     three separate `FROM` lines, it is declared once as `ARG
+#     UBUNTU_VERSION=26.04` immediately below and referenced as
+#     `${UBUNTU_VERSION}` in every stage — one place to bump when the base
+#     image changes, and the default means CI does not need to pass this
+#     build-arg for normal builds (it may still override it for a one-off
+#     build if ever needed). If the platform.ubuntu.version entry in
+#     config/versions.yaml is bumped, this ARG's default must be updated to
+#     match by hand as part of that change — versions.yaml documents the
+#     intended base image for humans, but this ARG is what actually pins it.
 #   - Multi-stage: large/one-shot downloads (Flutter SDK, GitHub-released
 #     CLI binaries) are fetched and verified in isolated builder stages, so
 #     the final stage only ever COPYs clean, extracted artifacts. This keeps
@@ -65,9 +63,10 @@
 #   one lock file with a minimal, fixed set of build ARGs, not an oversight.
 # =============================================================================
 
-# Base image tag only — see "UBUNTU_VERSION exception" above. Intentionally
-# has no default; CI must always supply it from config/versions.lock.
-ARG UBUNTU_VERSION
+# Base image tag, single source of truth for all three stages below. Has a
+# default so CI does not need to pass --build-arg UBUNTU_VERSION for normal
+# builds; override it explicitly only for a deliberate one-off build.
+ARG UBUNTU_VERSION=26.04
 
 # -----------------------------------------------------------------------------
 # Stage: flutter-sdk — fetch + prune the Flutter stable SDK
