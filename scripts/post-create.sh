@@ -2,117 +2,305 @@
 # =============================================================================
 # post-create.sh
 #
-# Runs inside the running container as the `vscode` user, via devcontainer.json
+# Runs inside the running container as the `vscode` user, via Dev Container
 # lifecycle hooks. It is intentionally split into two stages:
 #
-#   --stage=on-create    Runs once, right after the container is created
-#                         (before the workspace is fully mounted in some
-#                         Codespaces prebuild scenarios). Cheap, idempotent,
-#                         infra-only steps go here so Codespaces "prebuilds"
-#                         can cache them.
-#   --stage=post-create   Runs after the workspace source is available.
-#                         Installs THIS repository's actual dependencies
-#                         (Poetry/pnpm/Flutter), so the base image itself
-#                         stays framework-version-agnostic.
+#   --stage=on-create
+#       Runs once immediately after the container is created. Performs
+#       lightweight, idempotent infrastructure initialization that can be
+#       cached by Codespaces prebuilds.
 #
-# Safe to re-run: every step is idempotent and skips work that's already done.
+#   --stage=post-create
+#       Runs after the workspace is mounted. Installs THIS repository's
+#       project dependencies while keeping the published development image
+#       framework-version agnostic.
+#
+# Safe to re-run. Every operation is idempotent.
 # =============================================================================
+
 set -euo pipefail
 
 STAGE="post-create"
+
 for arg in "$@"; do
-  case "$arg" in
-    --stage=*) STAGE="${arg#*=}" ;;
-  esac
+    case "$arg" in
+        --stage=*)
+            STAGE="${arg#*=}"
+            ;;
+    esac
 done
 
-WORKSPACE_DIR="${PWD}"
-log() { printf '\n\033[1;36m[post-create:%s]\033[0m %s\n' "$STAGE" "$1"; }
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
+CONFIG_DIR="${WORKSPACE_DIR}/config"
+
+log() {
+    printf '\n\033[1;36m[post-create:%s]\033[0m %s\n' "$STAGE" "$1"
+}
+
+warn() {
+    printf '\n\033[1;33m[post-create:%s] WARNING:\033[0m %s\n' "$STAGE" "$1"
+}
+
+die() {
+    printf '\n\033[1;31m[post-create:%s] ERROR:\033[0m %s\n' "$STAGE" "$1" >&2
+    exit 1
+}
 
 # -----------------------------------------------------------------------------
-# Stage: on-create — infra warmup only, no project code required
+# Validate configuration
 # -----------------------------------------------------------------------------
+
+[ -d "${CONFIG_DIR}" ] \
+    || die "Missing config directory."
+
+[ -f "${CONFIG_DIR}/versions.yaml" ] \
+    || die "Missing config/versions.yaml."
+
+[ -x "${CONFIG_DIR}/resolve.sh" ] \
+    || die "config/resolve.sh is missing or not executable."
+
+if [ ! -f "${CONFIG_DIR}/versions.lock" ]; then
+    log "Generating versions.lock"
+    "${CONFIG_DIR}/resolve.sh"
+fi
+
+# shellcheck disable=SC1091
+source "${CONFIG_DIR}/versions.lock"
+
+# -----------------------------------------------------------------------------
+# Stage: on-create
+# -----------------------------------------------------------------------------
+
 run_on_create() {
-  log "Verifying toolchain (see 'baobab-verify' for the full report)"
-  baobab-verify --quiet || log "WARNING: one or more tools failed verification; run 'baobab-verify' for details."
 
-  log "Priming git configuration defaults"
-  git config --global --get user.name  >/dev/null 2>&1 || git config --global user.name  "BAOBAB Developer"
-  git config --global --get user.email >/dev/null 2>&1 || git config --global user.email "dev@example.com"
-  git config --global pull.rebase true
-  git config --global init.defaultBranch main
-  git config --global --add safe.directory "${WORKSPACE_DIR}"
+    log "Verifying development toolchain"
 
-  log "Priming Poetry / pip caches"
-  poetry config virtualenvs.in-project true
-}
-
-# -----------------------------------------------------------------------------
-# Stage: post-create — project-specific dependency installation
-# -----------------------------------------------------------------------------
-run_post_create() {
-  cd "${WORKSPACE_DIR}"
-
-  if [ -f "pyproject.toml" ]; then
-    log "Found pyproject.toml — installing Python dependencies with Poetry"
-    poetry env use "$(command -v python3.14)"
-    poetry install --no-interaction --no-ansi
-  elif [ -f "requirements.txt" ]; then
-    log "Found requirements.txt — installing with uv"
-    uv venv .venv
-    # shellcheck disable=SC1091
-    source .venv/bin/activate
-    uv pip install -r requirements.txt
-  else
-    log "No Python dependency manifest found at repo root — skipping Python install."
-  fi
-
-  if [ -f "package.json" ]; then
-    log "Found package.json — installing JS dependencies"
-    if [ -f "pnpm-lock.yaml" ]; then
-      pnpm install --frozen-lockfile
-    elif [ -f "yarn.lock" ]; then
-      yarn install --immutable
-    else
-      npm ci || npm install
+    if command -v baobab-verify >/dev/null 2>&1; then
+        baobab-verify --quiet \
+            || warn "Toolchain verification reported issues. Run 'baobab-verify' for details."
     fi
-  else
-    log "No package.json found at repo root — skipping JS install."
-  fi
 
-  if [ -f "pubspec.yaml" ]; then
-    log "Found pubspec.yaml — running flutter pub get"
-    flutter pub get
-  else
-    log "No pubspec.yaml found at repo root — skipping Flutter install."
-  fi
+    log "Priming Git configuration"
 
-  # Multi-package-manager monorepo support: BAOBAB's frontend / mobile
-  # packages may live in subdirectories rather than the repo root.
-  if [ -d "frontend" ] && [ -f "frontend/package.json" ] && [ ! -f "package.json" ]; then
-    log "Found frontend/package.json — installing"
-    (cd frontend && { [ -f pnpm-lock.yaml ] && pnpm install --frozen-lockfile || npm install; })
-  fi
-  if [ -d "mobile" ] && [ -f "mobile/pubspec.yaml" ]; then
-    log "Found mobile/pubspec.yaml — running flutter pub get"
-    (cd mobile && flutter pub get)
-  fi
+    git config --global --get user.name >/dev/null 2>&1 \
+        || git config --global user.name "BAOBAB Developer"
 
-  if [ -f "docker-compose.yml" ] || [ -f "docker-compose.yaml" ] || [ -f "compose.yaml" ]; then
-    log "Compose file detected. Bring up local infra with: docker compose up -d"
-  fi
+    git config --global --get user.email >/dev/null 2>&1 \
+        || git config --global user.email "dev@example.com"
 
-  if [ -f ".env.example" ] && [ ! -f ".env" ]; then
-    log "Creating .env from .env.example (fill in secrets before running the app)"
-    cp .env.example .env
-  fi
+    git config --global pull.rebase true
+    git config --global init.defaultBranch main
 
-  log "post-create complete."
-  baobab-summary
+    git config --global --get-all safe.directory \
+        | grep -Fxq "${WORKSPACE_DIR}" \
+        || git config --global --add safe.directory "${WORKSPACE_DIR}"
+
+    if command -v poetry >/dev/null 2>&1; then
+        log "Priming Poetry cache"
+        poetry config virtualenvs.in-project true
+    else
+        warn "Poetry not installed."
+    fi
 }
 
-case "$STAGE" in
-  on-create)   run_on_create ;;
-  post-create) run_post_create ;;
-  *) echo "Unknown stage: $STAGE" >&2; exit 1 ;;
+# -----------------------------------------------------------------------------
+# Stage: post-create
+# -----------------------------------------------------------------------------
+
+run_post_create() {
+
+    cd "${WORKSPACE_DIR}"
+
+    # -------------------------------------------------------------------------
+    # Python
+    # -------------------------------------------------------------------------
+
+    if [ -f "pyproject.toml" ]; then
+
+        if ! command -v poetry >/dev/null 2>&1; then
+            warn "Poetry not installed. Skipping Python dependency installation."
+        else
+
+            PYTHON_BIN="python${PYTHON_MINOR}"
+
+            log "Installing Python dependencies with Poetry"
+
+            poetry env use "$(command -v "${PYTHON_BIN}")"
+            poetry install --no-interaction --no-ansi
+
+        fi
+
+    elif [ -f "requirements.txt" ]; then
+
+        if ! command -v uv >/dev/null 2>&1; then
+            warn "uv not installed. Skipping Python dependency installation."
+        else
+
+            log "Installing Python dependencies with uv"
+
+            uv venv .venv
+
+            # shellcheck disable=SC1091
+            source .venv/bin/activate
+
+            uv pip install -r requirements.txt
+
+        fi
+
+    else
+
+        log "No Python dependency manifest found."
+
+    fi
+
+    # -------------------------------------------------------------------------
+    # JavaScript / TypeScript
+    # -------------------------------------------------------------------------
+
+    if [ -f "package.json" ]; then
+
+        log "Installing JavaScript dependencies"
+
+        if [ -f "pnpm-lock.yaml" ]; then
+
+            if command -v pnpm >/dev/null 2>&1; then
+                pnpm install --frozen-lockfile
+            else
+                warn "pnpm not installed."
+            fi
+
+        elif [ -f "yarn.lock" ]; then
+
+            if command -v yarn >/dev/null 2>&1; then
+                yarn install --immutable
+            else
+                warn "Yarn not installed."
+            fi
+
+        else
+
+            if command -v npm >/dev/null 2>&1; then
+                npm ci || npm install
+            else
+                warn "npm not installed."
+            fi
+
+        fi
+
+    else
+
+        log "No package.json found."
+
+    fi
+
+    # -------------------------------------------------------------------------
+    # Flutter
+    # -------------------------------------------------------------------------
+
+    if [ -f "pubspec.yaml" ]; then
+
+        if command -v flutter >/dev/null 2>&1; then
+            log "Running flutter pub get"
+            flutter pub get
+        else
+            warn "Flutter SDK not installed."
+        fi
+
+    else
+
+        log "No pubspec.yaml found."
+
+    fi
+
+    # -------------------------------------------------------------------------
+    # Monorepo support
+    # -------------------------------------------------------------------------
+
+    if [ -d "frontend" ] && [ -f "frontend/package.json" ] && [ ! -f "package.json" ]; then
+
+        log "Installing frontend dependencies"
+
+        (
+            cd frontend
+
+            if [ -f "pnpm-lock.yaml" ] && command -v pnpm >/dev/null 2>&1; then
+                pnpm install --frozen-lockfile
+            elif command -v npm >/dev/null 2>&1; then
+                npm install
+            else
+                warn "No supported JavaScript package manager available."
+            fi
+        )
+
+    fi
+
+    if [ -d "mobile" ] && [ -f "mobile/pubspec.yaml" ]; then
+
+        if command -v flutter >/dev/null 2>&1; then
+            log "Installing Flutter mobile dependencies"
+            (
+                cd mobile
+                flutter pub get
+            )
+        else
+            warn "Flutter SDK not installed."
+        fi
+
+    fi
+
+    # -------------------------------------------------------------------------
+    # Docker Compose
+    # -------------------------------------------------------------------------
+
+    if [ -f "docker-compose.yml" ] ||
+       [ -f "docker-compose.yaml" ] ||
+       [ -f "compose.yaml" ]; then
+
+        if command -v docker >/dev/null 2>&1; then
+            log "Compose configuration detected."
+            log "Run: docker compose up -d"
+        fi
+
+    fi
+
+    # -------------------------------------------------------------------------
+    # Environment
+    # -------------------------------------------------------------------------
+
+    if [ -f ".env.example" ] && [ ! -f ".env" ]; then
+        log "Creating .env from .env.example"
+        cp .env.example .env
+    fi
+
+    # -------------------------------------------------------------------------
+    # Summary
+    # -------------------------------------------------------------------------
+
+    log "Post-create complete."
+
+    if command -v baobab-summary >/dev/null 2>&1; then
+        baobab-summary
+    fi
+
+    # -------------------------------------------------------------------------
+    # Final verification
+    # -------------------------------------------------------------------------
+
+    if command -v baobab-verify >/dev/null 2>&1; then
+        baobab-verify --quiet
+    fi
+}
+
+case "${STAGE}" in
+    on-create)
+        run_on_create
+        ;;
+
+    post-create)
+        run_post_create
+        ;;
+
+    *)
+        die "Unknown stage '${STAGE}'."
+        ;;
 esac
