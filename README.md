@@ -1,10 +1,10 @@
-
 # BAOBAB Enterprise Dev Container
 
 The standard, enterprise-grade development environment for every BAOBAB
-Enterprise Platform engineer, maintained by **Nabhold Group Africa —
-Platform Engineering**.
+Enterprise Platform engineer, maintained by **Nabhold — Platform
+Engineering** ([github.com/nabhold](https://github.com/nabhold)).
 
+Source repository: [github.com/nabhold/baobab-devcontainer](https://github.com/nabhold/baobab-devcontainer)
 Published image: `ghcr.io/nabhold/baobab-dev`
 
 ---
@@ -39,7 +39,7 @@ Published image: `ghcr.io/nabhold/baobab-dev`
 - **Application-level dependencies** (Django, DRF, django-tenants, Celery,
   FastAPI, Next.js packages, etc.) — these belong to each project's own
   `pyproject.toml` / `package.json` / `pubspec.yaml` and are installed by
-  `.devcontainer/post-create.sh` on container creation. This keeps the base
+  `scripts/post-create.sh` on container creation. This keeps the base
   image reusable across every BAOBAB repository and framework upgrade
   without a rebuild.
 
@@ -47,15 +47,17 @@ Published image: `ghcr.io/nabhold/baobab-dev`
 
 ## 2. Using this image in a project
 
-1. Copy `.devcontainer/devcontainer.json` and `.devcontainer/post-create.sh`
-   into your project repository (or add this repo as a git submodule under
-   `.devcontainer/`).
+1. Copy `.devcontainer/devcontainer.json` and the `scripts/` directory
+   (at minimum `post-create.sh`, `verify.sh`, `summary.sh`, and
+   `bootstrap.sh`) into your project repository, at the project root
+   alongside `.devcontainer/` (or add this repo as a git submodule).
 2. Confirm the `image:` tag in `devcontainer.json` points at the version you
    want (see [Versioning](#5-versioning-strategy)).
 3. Open in VS Code → **Reopen in Container**, or create a GitHub Codespace.
-4. `onCreateCommand` / `postCreateCommand` run `post-create.sh`, which
-   detects `pyproject.toml`, `package.json`, and `pubspec.yaml` at your repo
-   root (and in `frontend/` / `mobile/` subfolders) and installs accordingly.
+4. `onCreateCommand` / `postCreateCommand` run `scripts/post-create.sh`,
+   which detects `pyproject.toml`, `package.json`, and `pubspec.yaml` at
+   your repo root (and in `frontend/` / `mobile/` subfolders) and installs
+   accordingly.
 5. Run `baobab-summary` any time for a snapshot of the environment, and
    `baobab-verify` for a full toolchain health check.
 
@@ -69,8 +71,8 @@ etc.), run:
 ```
 
 This configures git identity, `gh auth`, `.env` scaffolding, and pre-commit
-hooks, then delegates to `post-create.sh` for dependency installation. Use
-`--non-interactive` in CI.
+hooks, then delegates to `scripts/post-create.sh` for dependency
+installation. Use `--non-interactive` in CI.
 
 ---
 
@@ -79,11 +81,18 @@ hooks, then delegates to `post-create.sh` for dependency installation. Use
 Requires Docker with BuildKit (Docker Desktop / Docker Engine ≥ 23, or
 `docker buildx` installed standalone).
 
+The Dockerfile lives at `.devcontainer/docker/Dockerfile`, but the **build
+context must stay the repository root** — its `COPY` instructions
+(`config/bashrc.d/`, `scripts/verify.sh`, `scripts/summary.sh`) are resolved
+relative to context, not to the Dockerfile's own folder. Always pass `-f`
+explicitly with `.` (or the repo root) as the final context argument.
+
 ```bash
 # Single-arch, local test build (fast, native arch only)
 docker buildx build \
+  --file .devcontainer/docker/Dockerfile \
   --load \
-  --tag baobab-dev:dev \
+  --tag baobab-dev:local \
   .
 
 # Multi-arch build (what CI does) — requires a buildx builder with the
@@ -91,6 +100,7 @@ docker buildx build \
 # manifests must be pushed to a registry or built one arch at a time)
 docker buildx create --use --name baobab-builder 2>/dev/null || docker buildx use baobab-builder
 docker buildx build \
+  --file .devcontainer/docker/Dockerfile \
   --platform linux/amd64,linux/arm64 \
   --tag ghcr.io/nabhold/baobab-dev:dev \
   --push \
@@ -100,13 +110,16 @@ docker buildx build \
 Override any pinned version at build time, e.g. to test a Flutter bump:
 
 ```bash
-docker buildx build --build-arg FLUTTER_VERSION=3.45.0 --load -t baobab-devcontainer:flutter-test .
+docker buildx build \
+  --file .devcontainer/docker/Dockerfile \
+  --build-arg FLUTTER_VERSION=3.45.0 \
+  --load -t baobab-dev:flutter-test .
 ```
 
 ### Verifying a build
 
 ```bash
-docker run --rm baobab-dev:dev baobab-verify
+docker run --rm baobab-dev:local baobab-verify
 ```
 
 `verify.sh` exits non-zero if any **required** tool is missing/broken —
@@ -128,12 +141,11 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u <your-gh-username> --password-std
 
 Required repository/organization settings:
 
-- A GHCR package named `baobab-devcontainer` under the
-  `nabhold-group-africa` GitHub org, with **Inherit access from repository**
-  (or explicit team access) so every BAOBAB engineer's `GITHUB_TOKEN` /
-  PAT with `read:packages` can pull it without extra configuration —
-  this is what lets `devcontainer.json`'s `image:` field resolve without
-  a manual `docker login` inside Codespaces.
+- A GHCR package named `baobab-dev` under the `nabhold` GitHub org, with
+  **Inherit access from repository** (or explicit team access) so every
+  BAOBAB engineer's `GITHUB_TOKEN` / PAT with `read:packages` can pull it
+  without extra configuration — this is what lets `devcontainer.json`'s
+  `image:` field resolve without a manual `docker login` inside Codespaces.
 - Actions permissions on the repo: **Read and write permissions** for
   `GITHUB_TOKEN` (Settings → Actions → General → Workflow permissions),
   since the workflow pushes packages using the built-in token.
@@ -186,7 +198,8 @@ is enforced by the release checklist below.
 
 ### Release checklist
 
-1. Update pinned `ARG` versions in `Dockerfile` as needed.
+1. Update pinned `ARG` versions in `.devcontainer/docker/Dockerfile` as
+   needed.
 2. Update `CHANGELOG.md`.
 3. Open a PR — CI builds (no push) and smoke-tests via `baobab-verify`.
 4. Merge to `main`.
@@ -239,7 +252,7 @@ is enforced by the release checklist below.
 
 ### General hygiene
 
-- Keep `.github/workflows/build-and-publish.yml`'s PR-mode build as a
+- Keep `.github/workflows/publish.yml`'s PR-mode build as a
   required status check — it must never regress `baobab-verify`.
 - Re-run `docker buildx build --no-cache` at least once per quarter to
   catch silent apt-repo or upstream-URL breakage before a real release
@@ -256,17 +269,18 @@ is enforced by the release checklist below.
 
 ```
 .
-├── Dockerfile                      # multi-stage image definition
-├── config/
-│   └── bashrc.d/                   # sourced shell enhancements (prompt, aliases, history)
 ├── .devcontainer/
 │   ├── devcontainer.json           # Codespaces / VS Code Dev Container config
-│   └── post-create.sh              # project dependency install (on-create / post-create stages)
+│   └── docker/
+│       └── Dockerfile              # multi-stage image definition
+├── config/
+│   └── bashrc.d/                   # sourced shell enhancements (prompt, aliases, history)
 ├── scripts/
+│   ├── post-create.sh              # project dependency install (on-create / post-create stages)
 │   ├── bootstrap.sh                # standalone onboarding for non-VS Code usage
 │   ├── verify.sh                   # installed as `baobab-verify`
 │   └── summary.sh                  # installed as `baobab-summary`
 ├── .github/workflows/
-│   └── build-and-publish.yml       # multi-arch build, sign, and publish to GHCR
+│   └── publish.yml       # multi-arch build, sign, and publish to GHCR
 └── README.md
 ```
