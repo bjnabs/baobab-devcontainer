@@ -1,127 +1,340 @@
 #!/usr/bin/env bash
 # =============================================================================
-# verify.sh  (installed in the image as: baobab-verify)
+# verify.sh (installed as: baobab-verify)
 #
-# Validates that every tool BAOBAB developers depend on is installed, on
-# PATH, and executes without error. Intended to be run:
-#   - automatically during post-create.sh (via --quiet)
-#   - manually by a developer troubleshooting their environment
-#   - as a CI smoke test right after `docker build`, before publishing
+# Verifies that the BAOBAB development environment is healthy.
 #
-# Exit code: 0 if everything required passed, 1 if any REQUIRED check failed.
-# Optional tools that are missing only produce a warning, not a failure.
+# Exit codes
+#   0 = Success
+#   1 = One or more required checks failed
 # =============================================================================
-set -uo pipefail
+
+set -euo pipefail
+
+###############################################################################
+# Options
+###############################################################################
 
 QUIET=0
+
 for arg in "$@"; do
-  case "$arg" in
-    --quiet) QUIET=1 ;;
-  esac
+    case "$arg" in
+        --quiet) QUIET=1 ;;
+    esac
 done
+
+###############################################################################
+# Globals
+###############################################################################
 
 PASS=0
 FAIL=0
 WARN=0
 
-say()  { [ "$QUIET" -eq 0 ] && printf '%b\n' "$1" || true; }
-ok()   { PASS=$((PASS+1)); say "  \033[1;32m✔\033[0m $1"; }
-bad()  { FAIL=$((FAIL+1)); say "  \033[1;31m✘\033[0m $1"; }
-warnc(){ WARN=$((WARN+1)); say "  \033[1;33m•\033[0m $1"; }
+TMP_FLUTTER_LOG="$(mktemp)"
+trap 'rm -f "${TMP_FLUTTER_LOG}"' EXIT
+
+###############################################################################
+# Locate configuration
+###############################################################################
+
+CONFIG_DIR=""
+
+if [[ -n "${BAOBAB_CONFIG_DIR:-}" && -f "${BAOBAB_CONFIG_DIR}/versions.lock" ]]; then
+    CONFIG_DIR="${BAOBAB_CONFIG_DIR}"
+
+elif [[ -f "/usr/local/share/baobab/config/versions.lock" ]]; then
+    CONFIG_DIR="/usr/local/share/baobab/config"
+
+elif [[ -f "./config/versions.lock" ]]; then
+    CONFIG_DIR="./config"
+fi
+
+if [[ -n "${CONFIG_DIR}" ]]; then
+    # shellcheck disable=SC1091
+    source "${CONFIG_DIR}/versions.lock"
+fi
+
+###############################################################################
+# Defaults (fallback)
+###############################################################################
+
+: "${PYTHON_MINOR:=3.14}"
+: "${PYTHON_VERSION:=3.14}"
+: "${NODE_MAJOR:=24}"
+: "${FLUTTER_VERSION:=unknown}"
+: "${EXPECTED_USER:=vscode}"
+: "${EXPECTED_UID:=1000}"
+: "${EXPECTED_GID:=1000}"
+
+###############################################################################
+# Output helpers
+###############################################################################
+
+say() {
+    [[ "$QUIET" -eq 0 ]] && printf '%b\n' "$1"
+}
+
+ok() {
+    PASS=$((PASS+1))
+    say "  \033[1;32m✔\033[0m $1"
+}
+
+bad() {
+    FAIL=$((FAIL+1))
+    printf '  \033[1;31m✘\033[0m %s\n' "$1"
+}
+
+warnc() {
+    WARN=$((WARN+1))
+    [[ "$QUIET" -eq 0 ]] && printf '  \033[1;33m•\033[0m %s\n' "$1"
+}
+
+section() {
+    say ""
+    say "\033[1m$1\033[0m"
+}
+
+###############################################################################
+# Helpers
+###############################################################################
 
 check_required() {
-  local label="$1" cmd="$2"
-  if command -v "$cmd" >/dev/null 2>&1; then
-    ok "$label ($("$cmd" --version 2>&1 | head -n1))"
-  else
-    bad "$label — '$cmd' not found on PATH"
-  fi
+
+    local label="$1"
+    local cmd="$2"
+    local version_cmd="${3:-$2 --version}"
+
+    if command -v "$cmd" >/dev/null 2>&1; then
+        local version
+
+        version="$(
+            bash -c "$version_cmd" 2>/dev/null \
+            | head -n1
+        )"
+
+        ok "$label (${version})"
+
+    else
+        bad "$label — '$cmd' not found"
+    fi
 }
 
 check_optional() {
-  local label="$1" cmd="$2"
-  if command -v "$cmd" >/dev/null 2>&1; then
-    ok "$label ($("$cmd" --version 2>&1 | head -n1))"
-  else
-    warnc "$label — '$cmd' not found (optional)"
-  fi
+
+    local label="$1"
+    local cmd="$2"
+    local version_cmd="${3:-$2 --version}"
+
+    if command -v "$cmd" >/dev/null 2>&1; then
+
+        local version
+
+        version="$(
+            bash -c "$version_cmd" 2>/dev/null \
+            | head -n1
+        )"
+
+        ok "$label (${version})"
+
+    else
+
+        warnc "$label not installed"
+
+    fi
 }
 
-say "\033[1mBAOBAB devcontainer — environment verification\033[0m"
+###############################################################################
+# Header
+###############################################################################
 
-say "\n\033[1mCore system\033[0m"
-check_required "git"        git
-check_required "curl"       curl
-check_required "jq"         jq
-check_required "sudo"       sudo
+say ""
+say "\033[1mBAOBAB Development Environment Verification\033[0m"
 
-say "\n\033[1mPython toolchain\033[0m"
-check_required "Python 3.14"  python3.14
-check_required "pip"          pip3
-check_required "pipx"         pipx
-check_required "uv"           uv
-check_required "Poetry"       poetry
-if command -v poetry >/dev/null 2>&1; then
-  [ "$(poetry config virtualenvs.in-project)" = "true" ] \
-    && ok "Poetry configured for in-project virtualenvs" \
-    || warnc "Poetry virtualenvs.in-project is not 'true'"
+if [[ -f "${CONFIG_DIR:-}/versions.lock" ]]; then
+    say "Configuration : ${CONFIG_DIR}/versions.lock"
+else
+    say "Configuration : built-in defaults"
 fi
 
-say "\n\033[1mJavaScript toolchain\033[0m"
-check_required "Node.js" node
-check_required "npm"     npm
-check_required "pnpm"    pnpm
-check_required "yarn"    yarn
+###############################################################################
+# Core
+###############################################################################
 
-say "\n\033[1mFlutter / Dart\033[0m"
+section "Core System"
+
+check_required "git" git
+check_required "curl" curl
+check_required "jq" jq
+check_required "sudo" sudo
+
+###############################################################################
+# Python
+###############################################################################
+
+section "Python"
+
+check_required \
+    "Python ${PYTHON_VERSION}" \
+    "python${PYTHON_MINOR}" \
+    "python${PYTHON_MINOR} --version"
+
+check_required "pip" pip3
+check_required "pipx" pipx
+check_required "uv" uv
+check_required "Poetry" poetry
+
+if command -v poetry >/dev/null; then
+
+    if [[ "$(poetry config virtualenvs.in-project)" == "true" ]]; then
+        ok "Poetry configured for in-project virtualenvs"
+    else
+        warnc "Poetry virtualenvs.in-project=false"
+    fi
+
+fi
+
+###############################################################################
+# JavaScript
+###############################################################################
+
+section "JavaScript"
+
+check_required "Node.js ${NODE_MAJOR}" node
+check_required "npm" npm
+check_required "pnpm" pnpm
+check_optional "Yarn" yarn
+
+###############################################################################
+# Flutter
+###############################################################################
+
+section "Flutter"
+
 check_required "Flutter" flutter
-check_required "Dart"    dart
-if command -v flutter >/dev/null 2>&1; then
-  flutter doctor --no-version-check >/tmp/flutter-doctor.log 2>&1
-  if grep -q "No issues found" /tmp/flutter-doctor.log; then
-    ok "flutter doctor reports no issues"
-  else
-    warnc "flutter doctor reports issues (expected: no mobile SDKs in this image — see README). Full log: /tmp/flutter-doctor.log"
-  fi
+check_required "Dart" dart
+
+if [[ "$QUIET" -eq 0 ]] && command -v flutter >/dev/null; then
+
+    flutter doctor --no-version-check >"${TMP_FLUTTER_LOG}" 2>&1 || true
+
+    if grep -q "No issues found" "${TMP_FLUTTER_LOG}"; then
+        ok "flutter doctor reports healthy environment"
+    else
+        warnc "flutter doctor reports warnings"
+    fi
+
 fi
 
-say "\n\033[1mDatabase clients\033[0m"
-check_required "psql (PostgreSQL client)" psql
-check_required "redis-cli"                redis-cli
+###############################################################################
+# Databases
+###############################################################################
 
-say "\n\033[1mContainers\033[0m"
-check_required "docker CLI"      docker
-if docker compose version >/dev/null 2>&1; then
-  ok "docker compose plugin ($(docker compose version --short 2>/dev/null))"
-else
-  bad "docker compose plugin not available"
-fi
-if docker info >/dev/null 2>&1; then
-  ok "Docker daemon reachable (via mounted socket)"
-else
-  warnc "Docker daemon not reachable — expected until the container is started with the socket mounted (see devcontainer.json)"
+section "Database"
+
+check_required "PostgreSQL client" psql
+check_required "Redis CLI" redis-cli
+
+###############################################################################
+# Docker
+###############################################################################
+
+section "Containers"
+
+check_required "Docker CLI" docker
+
+if command -v docker >/dev/null; then
+
+    if docker compose version >/dev/null 2>&1; then
+        ok "Docker Compose plugin"
+    else
+        bad "Docker Compose plugin missing"
+    fi
+
+    if docker info >/dev/null 2>&1; then
+        ok "Docker daemon reachable"
+    else
+        warnc "Docker daemon unavailable"
+    fi
+
 fi
 
-say "\n\033[1mGitHub\033[0m"
+###############################################################################
+# GitHub
+###############################################################################
+
+section "GitHub"
+
 check_required "GitHub CLI" gh
 
-say "\n\033[1mShell utilities\033[0m"
-check_required "ripgrep (rg)" rg
-check_required "fd"           fd
-check_required "bat"          bat
-check_required "eza"          eza
-check_required "fzf"          fzf
-check_required "tmux"         tmux
+if command -v gh >/dev/null; then
 
-say "\n\033[1mUser / permissions\033[0m"
-[ "$(id -u)" = "1000" ] && ok "Running as UID 1000" || bad "Expected UID 1000, got $(id -u)"
-[ "$(id -g)" = "1000" ] && ok "Running as GID 1000" || bad "Expected GID 1000, got $(id -g)"
-[ "$(whoami)" = "vscode" ] && ok "Running as user 'vscode'" || bad "Expected user 'vscode', got $(whoami)"
-sudo -n true 2>/dev/null && ok "Passwordless sudo works" || bad "Passwordless sudo failed"
+    if gh auth status >/dev/null 2>&1; then
+        ok "GitHub authentication"
+    else
+        warnc "GitHub CLI not authenticated"
+    fi
 
-say "\n\033[1mResult:\033[0m \033[1;32m${PASS} passed\033[0m, \033[1;33m${WARN} warnings\033[0m, \033[1;31m${FAIL} failed\033[0m"
-
-if [ "$FAIL" -gt 0 ]; then
-  exit 1
 fi
-exit 0
+
+###############################################################################
+# Utilities
+###############################################################################
+
+section "Utilities"
+
+check_required "ripgrep" rg
+check_required "fd" fd
+check_required "bat" bat
+check_required "eza" eza
+check_required "fzf" fzf
+check_optional "tmux" tmux
+
+###############################################################################
+# User
+###############################################################################
+
+section "User"
+
+[[ "$(id -u)" == "${EXPECTED_UID}" ]] \
+    && ok "UID ${EXPECTED_UID}" \
+    || bad "Expected UID ${EXPECTED_UID}, got $(id -u)"
+
+[[ "$(id -g)" == "${EXPECTED_GID}" ]] \
+    && ok "GID ${EXPECTED_GID}" \
+    || bad "Expected GID ${EXPECTED_GID}, got $(id -g)"
+
+[[ "$(whoami)" == "${EXPECTED_USER}" ]] \
+    && ok "User ${EXPECTED_USER}" \
+    || bad "Expected user ${EXPECTED_USER}, got $(whoami)"
+
+sudo -n true >/dev/null 2>&1 \
+    && ok "Passwordless sudo" \
+    || bad "Passwordless sudo unavailable"
+
+###############################################################################
+# Summary
+###############################################################################
+
+say ""
+say "------------------------------------------------"
+
+say "Passed   : ${PASS}"
+say "Warnings : ${WARN}"
+say "Failed   : ${FAIL}"
+
+if [[ "$FAIL" -eq 0 ]]; then
+
+    say ""
+    say "\033[1;32mEnvironment Status : HEALTHY\033[0m"
+
+    exit 0
+
+else
+
+    say ""
+    say "\033[1;31mEnvironment Status : FAILED\033[0m"
+
+    exit 1
+
+fi
