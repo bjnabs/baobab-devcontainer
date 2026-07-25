@@ -1,0 +1,127 @@
+# ==============================================================================
+# BAOBAB Enterprise Platform
+# Development Container Version Manifest
+#
+# File: config/versions.yaml
+#
+# Purpose
+# -------
+# Single source of truth for all software versions installed by the BAOBAB
+# Development Container.
+#
+# Notes
+# -----
+# • Edit only this file when upgrading software.
+# • resolve.sh reads this file and generates versions.lock.
+# • The Dockerfile consumes versions.lock.
+# ==============================================================================
+
+manifest:
+  schema: "1.0"
+  name: "BAOBAB Development Container"
+  description: "Version manifest for the BAOBAB DevContainer"
+
+platform:
+  ubuntu:
+    version: "26.04"
+
+languages:
+
+  python:
+    version: "3.14.6"
+    source: "python.org"
+
+  node:
+    major: "24"
+    source: "nodesource"
+
+  flutter:
+    version: "latest"
+    channel: "stable"
+    source: "flutter"
+
+database:
+
+  postgresql:
+    major: "17"
+    source: "apt"
+
+package_managers:
+
+  uv:
+    version: "latest"
+    source: "github"
+
+  poetry:
+    version: "latest"
+    source: "github"
+
+  pnpm:
+    version: "latest"
+    source: "npm"
+
+utilities:
+
+  task:
+    version: "latest"
+    source: "github"
+
+  ripgrep:
+    version: "latest"
+    source: "github"
+
+  fd:
+    version: "latest"
+    source: "github"
+
+  bat:
+    version: "latest"
+    source: "github"
+
+  eza:
+    version: "latest"
+    source: "github"
+
+  jq:
+    version: "system"
+    source: "apt"
+
+  yq:
+    version: "latest"
+    source: "github"
+
+  fzf:
+    version: "system"
+    source: "apt"
+
+  tree:
+    version: "system"
+    source: "apt"
+
+  unzip:
+    version: "system"
+    source: "apt"
+
+  zip:
+    version: "system"
+    source: "apt"
+
+  xz:
+    version: "system"
+    source: "apt"
+
+development:
+
+  docker:
+    version: "latest"
+    source: "docker"
+
+  github_cli:
+    version: "latest"
+    source: "github"
+
+security:
+
+  cosign:
+    version: "latest"
+    source: "github"
