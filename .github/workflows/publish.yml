@@ -56,9 +56,56 @@ permissions:
 
 jobs:
 
+  #
+  # Resolve tool versions
+  #
+  # config/versions.lock is a generated file — it is intentionally NOT
+  # committed to the repository and the Dockerfile never runs resolve.sh
+  # itself (version resolution always happens outside Docker). This job is
+  # the single place that runs config/resolve.sh, and its output is shared
+  # with every platform in the build matrix via an artifact so that
+  # linux/amd64 and linux/arm64 are guaranteed to be built from the exact
+  # same pinned versions — resolving independently per matrix leg could
+  # otherwise race against upstream "latest" releases changing mid-run and
+  # silently produce two images with mismatched toolchains.
+  #
+  resolve:
+
+    name: Resolve tool versions
+
+    runs-on: ubuntu-24.04
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Run config/resolve.sh
+        run: |
+          chmod +x config/resolve.sh
+          ./config/resolve.sh
+          # Fail fast here, with a clear message, rather than deep inside
+          # the Docker build with a cryptic "file not found".
+          test -s config/versions.lock
+
+      - name: Upload versions.lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: versions-lock
+          path: config/versions.lock
+          retention-days: 1
+          if-no-files-found: error
+
   build:
 
     name: Build (${{ matrix.platform }})
+
+    needs: resolve
 
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
 
@@ -77,6 +124,12 @@ jobs:
     steps:
 
       - uses: actions/checkout@v4
+
+      - name: Download versions.lock
+        uses: actions/download-artifact@v4
+        with:
+          name: versions-lock
+          path: config
 
       - uses: docker/setup-qemu-action@v3
 
