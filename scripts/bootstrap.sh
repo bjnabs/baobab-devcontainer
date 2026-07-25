@@ -3,105 +3,237 @@
 # bootstrap.sh
 #
 # One-command onboarding for a new BAOBAB engineer or an automated runner
-# that consumes the published ghcr.io/nabhold-group-africa/baobab-devcontainer
-# image OUTSIDE of the VS Code / Codespaces devcontainer lifecycle — e.g.:
-#   - a bare `docker run` for a GitHub Actions self-hosted job
-#   - a fresh Codespace where a developer wants to re-run onboarding by hand
-#   - a local machine that has cloned the devcontainer repo directly
+# that consumes the published ghcr.io/nabhold/baobab-dev image outside of the
+# VS Code / Codespaces Dev Container lifecycle, for example:
 #
-# This complements (does not replace) .devcontainer/post-create.sh:
-#   post-create.sh -> installs THIS repo's language dependencies
-#   bootstrap.sh    -> configures the developer's identity, auth, git hooks,
-#                      and secrets scaffolding, then delegates dependency
-#                      installation to post-create.sh
+#   • a bare `docker run`
+#   • a GitHub Actions self-hosted runner
+#   • a developer re-running onboarding manually
+#   • a local clone of the baobab-devcontainer repository
+#
+# This complements (does not replace) scripts/post-create.sh:
+#
+#   post-create.sh
+#       Performs repository-specific initialization.
+#
+#   bootstrap.sh
+#       Verifies the development image, configures developer identity,
+#       authenticates GitHub CLI, installs Git hooks, scaffolds secrets,
+#       and delegates repository initialization to post-create.sh.
 #
 # Usage:
-#   ./scripts/bootstrap.sh [--non-interactive]
+#
+#   ./scripts/bootstrap.sh
+#   ./scripts/bootstrap.sh --non-interactive
+#
 # =============================================================================
+
 set -euo pipefail
 
 NON_INTERACTIVE=0
+
 for arg in "$@"; do
-  case "$arg" in
-    --non-interactive) NON_INTERACTIVE=1 ;;
-  esac
+    case "$arg" in
+        --non-interactive)
+            NON_INTERACTIVE=1
+            ;;
+    esac
 done
 
-log()  { printf '\n\033[1;36m[bootstrap]\033[0m %s\n' "$1"; }
-warn() { printf '\n\033[1;33m[bootstrap] WARNING:\033[0m %s\n' "$1"; }
-die()  { printf '\n\033[1;31m[bootstrap] ERROR:\033[0m %s\n' "$1" >&2; exit 1; }
+log() {
+    printf '\n\033[1;36m[bootstrap]\033[0m %s\n' "$1"
+}
+
+warn() {
+    printf '\n\033[1;33m[bootstrap] WARNING:\033[0m %s\n' "$1"
+}
+
+die() {
+    printf '\n\033[1;31m[bootstrap] ERROR:\033[0m %s\n' "$1" >&2
+    exit 1
+}
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "${REPO_ROOT}"
 
+CONFIG_DIR="${REPO_ROOT}/config"
+
 # -----------------------------------------------------------------------------
-# 1. Sanity-check we're actually on the expected image
+# Configuration
 # -----------------------------------------------------------------------------
-log "Checking toolchain versions"
+
+[ -d "${CONFIG_DIR}" ] \
+    || die "Missing config directory."
+
+[ -f "${CONFIG_DIR}/versions.yaml" ] \
+    || die "Missing config/versions.yaml"
+
+[ -x "${CONFIG_DIR}/resolve.sh" ] \
+    || die "config/resolve.sh is missing or is not executable."
+
+if [ ! -f "${CONFIG_DIR}/versions.lock" ]; then
+    log "Generating versions.lock"
+    "${CONFIG_DIR}/resolve.sh"
+fi
+
+# shellcheck disable=SC1091
+source "${CONFIG_DIR}/versions.lock"
+
+# -----------------------------------------------------------------------------
+# Verify development image
+# -----------------------------------------------------------------------------
+
+log "Checking BAOBAB development image"
+
 if command -v baobab-verify >/dev/null 2>&1; then
-  baobab-verify --quiet || warn "Toolchain verification reported issues — run 'baobab-verify' for details."
+    baobab-verify --quiet \
+        || warn "Toolchain verification reported issues. Run 'baobab-verify' for details."
 else
-  warn "baobab-verify not found. Are you running inside the BAOBAB devcontainer image?"
+    warn "baobab-verify not found. Are you running inside the BAOBAB development image?"
 fi
 
 # -----------------------------------------------------------------------------
-# 2. Git identity
+# Git configuration
 # -----------------------------------------------------------------------------
-log "Configuring git identity"
-git config --global --add safe.directory "${REPO_ROOT}"
-if [ "$NON_INTERACTIVE" -eq 0 ] && [ -z "$(git config --global user.name || true)" ]; then
-  read -rp "  Git user.name: "  GIT_NAME
-  read -rp "  Git user.email: " GIT_EMAIL
-  git config --global user.name  "${GIT_NAME}"
-  git config --global user.email "${GIT_EMAIL}"
+
+log "Configuring Git"
+
+git config --global --get-all safe.directory \
+    | grep -Fxq "${REPO_ROOT}" \
+    || git config --global --add safe.directory "${REPO_ROOT}"
+
+if [ "${NON_INTERACTIVE}" -eq 0 ] &&
+   [ -z "$(git config --global user.name || true)" ]; then
+
+    read -rp "Git user.name : " GIT_NAME
+    read -rp "Git user.email: " GIT_EMAIL
+
+    git config --global user.name "${GIT_NAME}"
+    git config --global user.email "${GIT_EMAIL}"
 fi
+
 git config --global pull.rebase true
 git config --global init.defaultBranch main
-git config --global core.editor "code --wait"
+
+if command -v code >/dev/null 2>&1; then
+    git config --global core.editor "code --wait"
+fi
 
 # -----------------------------------------------------------------------------
-# 3. GitHub CLI authentication
+# GitHub CLI
 # -----------------------------------------------------------------------------
-log "Checking GitHub CLI authentication"
-if ! gh auth status >/dev/null 2>&1; then
-  if [ -n "${GITHUB_TOKEN:-}" ]; then
-    log "Authenticating gh via GITHUB_TOKEN"
-    echo "${GITHUB_TOKEN}" | gh auth login --with-token
-  elif [ "$NON_INTERACTIVE" -eq 0 ]; then
-    log "Launching interactive 'gh auth login' (Codespaces usually pre-authenticates this for you)"
-    gh auth login || warn "gh auth login was skipped or failed; some scripts may not work until you authenticate."
-  else
-    warn "Non-interactive mode with no GITHUB_TOKEN set — skipping gh auth."
-  fi
+
+if command -v gh >/dev/null 2>&1; then
+
+    log "Checking GitHub CLI authentication"
+
+    if ! gh auth status >/dev/null 2>&1; then
+
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+
+            log "Authenticating GitHub CLI using GITHUB_TOKEN"
+
+            echo "${GITHUB_TOKEN}" | gh auth login --with-token
+
+        elif [ "${NON_INTERACTIVE}" -eq 0 ]; then
+
+            log "Launching interactive GitHub authentication"
+
+            gh auth login \
+                || warn "GitHub authentication was skipped."
+
+        else
+
+            warn "Non-interactive mode with no GITHUB_TOKEN. Skipping authentication."
+
+        fi
+
+    else
+
+        log "Authenticated as $(gh api user --jq .login 2>/dev/null || echo unknown)"
+
+    fi
+
 else
-  log "gh is already authenticated as $(gh api user --jq .login 2>/dev/null || echo unknown)"
+
+    warn "GitHub CLI is not installed."
+
 fi
 
 # -----------------------------------------------------------------------------
-# 4. Secrets / environment scaffolding
+# Environment
 # -----------------------------------------------------------------------------
+
 if [ -f ".env.example" ] && [ ! -f ".env" ]; then
-  log "Creating .env from .env.example"
-  cp .env.example .env
-  warn "Remember to fill in real secrets in .env — it is git-ignored by default."
+
+    log "Creating .env"
+
+    cp ".env.example" ".env"
+
+    warn ".env has been created. Populate it with your local secrets."
+
 fi
 
 # -----------------------------------------------------------------------------
-# 5. Git hooks (pre-commit)
+# Git hooks
 # -----------------------------------------------------------------------------
+
 if [ -f ".pre-commit-config.yaml" ]; then
-  log "Installing pre-commit hooks"
-  pipx list 2>/dev/null | grep -q pre-commit || pipx install pre-commit
-  pre-commit install --install-hooks
+
+    if command -v pipx >/dev/null 2>&1; then
+
+        log "Installing pre-commit hooks"
+
+        pipx list 2>/dev/null | grep -q pre-commit \
+            || pipx install pre-commit
+
+        command -v pre-commit >/dev/null 2>&1 \
+            || die "pre-commit installation failed."
+
+        pre-commit install --install-hooks
+
+    else
+
+        warn "pipx not installed. Skipping pre-commit installation."
+
+    fi
+
 fi
 
 # -----------------------------------------------------------------------------
-# 6. Delegate dependency installation to post-create.sh, if present
+# Repository initialization
 # -----------------------------------------------------------------------------
-if [ -f ".devcontainer/post-create.sh" ]; then
-  log "Running .devcontainer/post-create.sh to install project dependencies"
-  bash .devcontainer/post-create.sh --stage=on-create
-  bash .devcontainer/post-create.sh --stage=post-create
+
+POST_CREATE="${REPO_ROOT}/scripts/post-create.sh"
+
+if [ -f "${POST_CREATE}" ]; then
+
+    chmod +x "${POST_CREATE}"
+
+    log "Running post-create.sh"
+
+    bash "${POST_CREATE}" --stage=on-create
+    bash "${POST_CREATE}" --stage=post-create
+
+else
+
+    warn "scripts/post-create.sh not found."
+
 fi
 
-log "Bootstrap complete. Run 'baobab-summary' any time for an environment overview."
+# -----------------------------------------------------------------------------
+# Final verification
+# -----------------------------------------------------------------------------
+
+if command -v baobab-verify >/dev/null 2>&1; then
+
+    log "Running final environment verification"
+
+    baobab-verify \
+        || warn "Environment verification reported issues."
+
+fi
+
+log "Bootstrap complete."
+
+log "Run 'baobab-summary' at any time for an overview of your development environment."
