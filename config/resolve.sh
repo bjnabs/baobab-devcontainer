@@ -76,6 +76,7 @@ github_latest() {
     local repo="$1"
 
     curl -fsSL \
+        ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
         "https://api.github.com/repos/${repo}/releases/latest" |
         yq -r '.tag_name' |
         sed 's/^v//'
