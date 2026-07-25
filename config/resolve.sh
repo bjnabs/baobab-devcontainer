@@ -34,7 +34,7 @@ LOCKFILE="${SCRIPT_DIR}/versions.lock"
 # ------------------------------------------------------------------------------
 
 info() {
-    printf "[INFO] %s\n" "$*"
+    printf "[INFO] %s\n" "$*" >&2
 }
 
 warn() {
