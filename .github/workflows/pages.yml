@@ -1,62 +1,147 @@
+# ==============================================================================
+# GitHub Actions Workflow
+# ==============================================================================
+# Workflow : Deploy Documentation
+#
+# Purpose
+# -------
+# Builds the BAOBAB documentation using MkDocs and deploys the generated
+# static site to GitHub Pages.
+#
+# This workflow is intentionally limited to documentation deployment and does
+# not build or publish the development container image.
+#
+# Trigger Conditions
+# ------------------
+# • Pushes to the main branch affecting documentation.
+# • Manual execution from the GitHub Actions UI.
+#
+# Documentation Source
+# --------------------
+# docs/
+#
+# Output
+# ------
+# GitHub Pages
+#
+# ==============================================================================
+
 name: Deploy Documentation
 
 on:
   push:
     branches:
       - main
+
     paths:
+      # Documentation
       - "docs/**"
+
+      # Site configuration
       - "mkdocs.yml"
+
+      # Python dependencies
       - "pyproject.toml"
       - "uv.lock"
+
+      # Workflow updates
       - ".github/workflows/pages.yml"
 
   workflow_dispatch:
 
+# ------------------------------------------------------------------------------
+# Required permissions
+#
+# Follow the principle of least privilege.
+# ------------------------------------------------------------------------------
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# ------------------------------------------------------------------------------
+# Prevent multiple documentation deployments running simultaneously.
+# ------------------------------------------------------------------------------
 concurrency:
   group: github-pages
   cancel-in-progress: true
 
+env:
+  PYTHON_VERSION: "3.13"
+
 jobs:
+
   deploy:
-    name: Build and Deploy Documentation
+    name: Build and Deploy GitHub Pages
+
     runs-on: ubuntu-latest
 
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
-      - name: Checkout repository
+
+      # ------------------------------------------------------------------------
+      # Checkout repository
+      # ------------------------------------------------------------------------
+      - name: Checkout source
         uses: actions/checkout@v5
 
+      # ------------------------------------------------------------------------
+      # Install Python
+      # ------------------------------------------------------------------------
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # ------------------------------------------------------------------------
+      # Install uv
+      # ------------------------------------------------------------------------
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
+      # ------------------------------------------------------------------------
+      # Restore dependency cache
+      # (uv automatically integrates with the GitHub Actions cache)
+      # ------------------------------------------------------------------------
+      - name: Synchronize project dependencies
+        run: |
+          uv sync --locked --group docs
 
-      - name: Sync project dependencies
-        run: uv sync --locked --group docs
-
-      - name: Build documentation
-        run: uv run mkdocs build --strict
-
+      # ------------------------------------------------------------------------
+      # Configure GitHub Pages
+      # ------------------------------------------------------------------------
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      # ------------------------------------------------------------------------
+      # Build documentation
+      #
+      # --strict
+      #     Treat warnings as errors.
+      #
+      # --verbose
+      #     Produce detailed logs to simplify troubleshooting.
+      # ------------------------------------------------------------------------
+      - name: Build documentation
+        run: |
+          uv run mkdocs build \
+            --strict \
+            --verbose
+
+      # ------------------------------------------------------------------------
+      # Upload generated static site
+      # ------------------------------------------------------------------------
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: site
 
-      - name: Deploy to GitHub Pages
-        id: deployment
+      # ------------------------------------------------------------------------
+      # Deploy
+      # ------------------------------------------------------------------------
+      - name: Deploy documentation
+        id: deploy
         uses: actions/deploy-pages@v4
