@@ -42,7 +42,7 @@ The result is a development platform that is predictable, maintainable, and scal
 Clone the repository:
 
 ```bash
-git clone https://github.com/<OWNER>/baobab-devcontainer.git
+git clone https://github.com/nabhold/baobab-devcontainer.git
 cd baobab-devcontainer
 ```
 
