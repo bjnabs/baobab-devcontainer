@@ -84,22 +84,55 @@ RUN apt-get update && \
 # and never re-derives a version on its own.
 COPY config/versions.lock /tmp/baobab-config/versions.lock
 
-# Flutter publishes separate archives per host arch. Map Docker's TARGETARCH
-# (amd64/arm64) onto Flutter's naming (x64/arm64).
+# Flutter's officially distributed pre-built SDK bundle is x64-only — its
+# release manifest (storage.googleapis.com/flutter_infra_release/releases/
+# releases_linux.json) has never published a separate archive for any other
+# architecture; the filename is simply flutter_linux_<version>-stable.tar.xz,
+# with no arch segment. There is no equivalent pre-built tarball for Linux
+# ARM64 hosts to point at.
+#
+# Per Flutter's own guidance for ARM64 Linux hosts (Raspberry Pi, Ampere
+# Altra, Apple Silicon Linux VMs, GitHub's ubuntu-*-arm runners, etc.), the
+# supported path there is different: clone the flutter/flutter repository
+# directly. The `flutter` tool detects the host architecture itself and
+# fetches the matching engine/Dart SDK artifacts on first invocation
+# (triggered later, in the final stage's `flutter precache` step) — so no
+# manual per-arch URL construction is needed or possible for arm64.
+#
+# The arm64 fetch uses an explicit `refs/tags/<version>` refspec rather than
+# `git clone --branch <version>`. Several past Flutter releases have shipped
+# a branch with the same name as their release tag (see
+# https://github.com/flutter/flutter/issues/104901); `--branch` can silently
+# resolve to that branch instead of the tag, leaving `flutter --version`
+# reporting "0.0.0-unknown". An explicit `refs/tags/` source refspec on
+# `git fetch` cannot be redirected to a same-named branch, so this is
+# correct regardless of any future naming collision.
 RUN set -euo pipefail; \
     . /tmp/baobab-config/versions.lock; \
-    case "${TARGETARCH}" in \
-      amd64) FLUTTER_ARCH="x64" ;; \
-      arm64) FLUTTER_ARCH="arm64" ;; \
-      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
-    esac; \
-    curl -fsSL -o /tmp/flutter.tar.xz \
-      "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_ARCH}_${FLUTTER_VERSION}-stable.tar.xz"; \
     mkdir -p /opt/flutter-tmp; \
-    tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-tmp --strip-components=1; \
-    rm -f /tmp/flutter.tar.xz; \
-    # Strip VCS history and docs we don't need at runtime to shrink the layer.
-    rm -rf /opt/flutter-tmp/.git /opt/flutter-tmp/packages/flutter/doc
+    case "${TARGETARCH}" in \
+      amd64) \
+        curl -fsSL -o /tmp/flutter.tar.xz \
+          "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"; \
+        tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-tmp --strip-components=1; \
+        rm -f /tmp/flutter.tar.xz; \
+        # .git is not present in the tarball distribution and isn't needed;
+        # docs aren't needed at runtime either. Both safe to drop to shrink
+        # the layer.
+        rm -rf /opt/flutter-tmp/.git /opt/flutter-tmp/packages/flutter/doc \
+        ;; \
+      arm64) \
+        git init -q /opt/flutter-tmp; \
+        git -C /opt/flutter-tmp remote add origin https://github.com/flutter/flutter.git; \
+        git -C /opt/flutter-tmp fetch --depth 1 origin \
+          "refs/tags/${FLUTTER_VERSION}:refs/tags/${FLUTTER_VERSION}"; \
+        git -C /opt/flutter-tmp checkout -q "${FLUTTER_VERSION}"; \
+        # .git MUST be kept here — the flutter tool reads it to resolve its
+        # own version/channel. Docs are still safe to drop.
+        rm -rf /opt/flutter-tmp/packages/flutter/doc \
+        ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac
 
 # Mark the checkout as a safe, git-tracked directory so `flutter --version`
 # and `flutter doctor` behave correctly for every user that inherits it.
@@ -187,7 +220,17 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # -----------------------------------------------------------------------------
 # 1. Core system packages, locale, timezone
 # -----------------------------------------------------------------------------
-RUN apt-get update && \
+# Ubuntu's default apt config (docker-clean) deletes downloaded .deb files
+# and the apt lists cache immediately after every apt-get invocation, which
+# defeats BuildKit's --mount=type=cache for /var/cache/apt and /var/lib/apt
+# below. Removing it (and telling apt to keep downloaded packages) lets
+# those cache mounts actually persist package downloads across rebuilds.
+RUN rm -f /etc/apt/apt.conf.d/docker-clean; \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
       sudo curl wget git unzip zip tar jq tree nano vim less htop procps \
       ca-certificates gnupg software-properties-common build-essential \
@@ -197,9 +240,7 @@ RUN apt-get update && \
     locale-gen en_US.UTF-8 && \
     update-locale LANG=en_US.UTF-8 LANGUAGE=en_US:en && \
     ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    dpkg-reconfigure -f noninteractive tzdata
 
 # -----------------------------------------------------------------------------
 # 2. BAOBAB runtime configuration layout
@@ -231,8 +272,16 @@ ENV BAOBAB_CONFIG_DIR=/usr/local/share/baobab/config
 #    regardless of what the Ubuntu base currently ships). The minor version
 #    (e.g. "3.14") is derived from versions.lock's full PYTHON_VERSION
 #    (e.g. "3.14.6") since apt package names use major.minor only.
+#
+# pip is deliberately bootstrapped via get-pip.py rather than apt's
+# python3-pip: Debian/Ubuntu's packaged pip marks itself EXTERNALLY-MANAGED
+# (PEP 668), which then requires --break-system-packages on every pip
+# invocation, including tools that call pip internally. get-pip.py installs
+# a normal, unrestricted pip directly into the pinned interpreter instead.
 # -----------------------------------------------------------------------------
-RUN . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
     PYTHON_MINOR="${PYTHON_VERSION%.*}" && \
     add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update && \
@@ -240,13 +289,10 @@ RUN . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
       python${PYTHON_MINOR} \
       python${PYTHON_MINOR}-venv \
       python${PYTHON_MINOR}-dev \
-      python3-pip \
     && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_MINOR} 1 && \
     update-alternatives --install /usr/bin/python  python  /usr/bin/python${PYTHON_MINOR} 1 && \
-    curl -fsSL https://bootstrap.pypa.io/get-pip.py | python${PYTHON_MINOR} - --no-cache-dir && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    curl -fsSL https://bootstrap.pypa.io/get-pip.py | python${PYTHON_MINOR} - --no-cache-dir
 
 # pipx, uv, Poetry — installed once, globally, then made available to every
 # user via /usr/local so Codespaces prebuilds and post-create scripts share
@@ -267,14 +313,14 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages pipx && \
 # -----------------------------------------------------------------------------
 # 4. Node.js LTS, npm, pnpm, yarn
 # -----------------------------------------------------------------------------
-RUN . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
     curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     corepack enable && \
     corepack prepare pnpm@latest --activate && \
-    corepack prepare yarn@stable --activate && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    corepack prepare yarn@stable --activate
 
 # -----------------------------------------------------------------------------
 # 5. Flutter + Dart (copied from the flutter-sdk builder stage)
@@ -295,7 +341,9 @@ RUN git config --global --add safe.directory /opt/flutter && \
 # -----------------------------------------------------------------------------
 # 6. PostgreSQL client + Redis CLI (client tools only — no server daemons)
 # -----------------------------------------------------------------------------
-RUN . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
     install -d /usr/share/postgresql-common/pgdg && \
     curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
       -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc && \
@@ -305,16 +353,15 @@ https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CO
     apt-get update && \
     apt-get install -y --no-install-recommends \
       postgresql-client-${POSTGRES_MAJOR} \
-      redis-tools \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+      redis-tools
 
 # -----------------------------------------------------------------------------
 # 7. Docker CLI + Compose plugin (client only — Codespaces mounts the host
 #    Docker socket, so no dockerd/containerd is installed in this image)
 # -----------------------------------------------------------------------------
-RUN install -m 0755 -d /etc/apt/keyrings && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
     chmod a+r /etc/apt/keyrings/docker.asc && \
     ARCH=$(dpkg --print-architecture) && \
@@ -325,15 +372,14 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CO
     apt-get install -y --no-install-recommends \
       docker-ce-cli \
       docker-compose-plugin \
-      docker-buildx-plugin \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+      docker-buildx-plugin
 
 # -----------------------------------------------------------------------------
 # 8. GitHub CLI
 # -----------------------------------------------------------------------------
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
     chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
     ARCH=$(dpkg --print-architecture) && \
@@ -341,9 +387,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 https://cli.github.com/packages stable main" \
       > /etc/apt/sources.list.d/github-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends gh && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt-get install -y --no-install-recommends gh
 
 # -----------------------------------------------------------------------------
 # 9. Shell productivity utilities
@@ -351,10 +395,10 @@ https://cli.github.com/packages stable main" \
 #    ripgrep/fd/bat/eza are copied pre-built from the cli-tools builder stage
 #    for pinned, reproducible versions across Ubuntu releases.
 # -----------------------------------------------------------------------------
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends fzf tmux bash-completion && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends fzf tmux bash-completion
 
 COPY --from=cli-tools /opt/cli-tools/bin/rg  /usr/local/bin/rg
 COPY --from=cli-tools /opt/cli-tools/bin/fd  /usr/local/bin/fd
@@ -385,10 +429,10 @@ ENV PATH="/home/vscode/.local/bin:/opt/flutter/bin:/opt/flutter/bin/cache/dart-s
     BAOBAB_BUILD_DATE=${BUILD_DATE} \
     BAOBAB_GIT_REVISION=${REVISION}
 
-# Give the vscode user ownership of the pipx/poetry install and Flutter's
-# mutable caches (pub-cache, tool state) so `flutter`/`poetry` never need
-# sudo at runtime.
-RUN chown -R vscode:vscode /opt/flutter/.pub-cache 2>/dev/null || true
+# Give the vscode user ownership of the entire Flutter SDK (not just the
+# pub-cache) so `flutter`/`dart` can update internal lockfiles, engine
+# caches, and version state without needing sudo at runtime.
+RUN chown -R vscode:vscode /opt/flutter
 
 # -----------------------------------------------------------------------------
 # 12. Shell enhancements: completions, aliases, colored prompt, history
