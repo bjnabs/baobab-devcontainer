@@ -134,10 +134,6 @@ RUN set -euo pipefail; \
       *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
     esac
 
-# Mark the checkout as a safe, git-tracked directory so `flutter --version`
-# and `flutter doctor` behave correctly for every user that inherits it.
-RUN git config --global --add safe.directory /opt/flutter
-
 # -----------------------------------------------------------------------------
 # Stage: cli-tools — fetch pinned Rust/Go CLI utilities from GitHub Releases
 # -----------------------------------------------------------------------------
@@ -268,10 +264,22 @@ COPY --chmod=0755 config/resolve.sh /usr/local/share/baobab/config/resolve.sh
 ENV BAOBAB_CONFIG_DIR=/usr/local/share/baobab/config
 
 # -----------------------------------------------------------------------------
-# 3. Python toolchain (deadsnakes PPA — guarantees the pinned minor version
-#    regardless of what the Ubuntu base currently ships). The minor version
-#    (e.g. "3.14") is derived from versions.lock's full PYTHON_VERSION
-#    (e.g. "3.14.6") since apt package names use major.minor only.
+# 3. Python toolchain. The minor version (e.g. "3.14") is derived from
+#    versions.lock's full PYTHON_VERSION (e.g. "3.14.6") since apt package
+#    names use major.minor only.
+#
+# deadsnakes is added conditionally, not unconditionally: some deadsnakes
+# releases deliberately omit the Ubuntu base image's own native default
+# Python version, since it's already available from Ubuntu's own archives
+# (e.g. Python 3.10 on jammy, 3.12 on noble, 3.14 on resolute are all
+# excluded from deadsnakes for exactly this reason — see
+# https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa). Unconditionally
+# adding the PPA and expecting it to always have the pinned version breaks
+# whenever versions.lock happens to pin the same version the base image
+# already ships. Probing `apt-cache show` against the base archives first,
+# before deciding whether to add the PPA, keeps this correct regardless of
+# whether the pin matches the base image's native version or diverges from
+# it — without hard-coding today's specific version/codename pairing.
 #
 # pip is deliberately bootstrapped via get-pip.py rather than apt's
 # python3-pip: Debian/Ubuntu's packaged pip marks itself EXTERNALLY-MANAGED
@@ -283,8 +291,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
     PYTHON_MINOR="${PYTHON_VERSION%.*}" && \
-    add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update && \
+    if apt-cache show "python${PYTHON_MINOR}" >/dev/null 2>&1; then \
+      echo "python${PYTHON_MINOR} is already available from Ubuntu's own archives; skipping deadsnakes"; \
+    else \
+      echo "python${PYTHON_MINOR} not found in Ubuntu's own archives; adding deadsnakes PPA"; \
+      add-apt-repository -y ppa:deadsnakes/ppa && \
+      apt-get update; \
+    fi && \
     apt-get install -y --no-install-recommends \
       python${PYTHON_MINOR} \
       python${PYTHON_MINOR}-venv \
@@ -292,7 +306,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_MINOR} 1 && \
     update-alternatives --install /usr/bin/python  python  /usr/bin/python${PYTHON_MINOR} 1 && \
-    curl -fsSL https://bootstrap.pypa.io/get-pip.py | python${PYTHON_MINOR} - --no-cache-dir --break-system-packages
+    curl -fsSL https://bootstrap.pypa.io/get-pip.py | python${PYTHON_MINOR} - --no-cache-dir
 
 # pipx, uv, Poetry — installed once, globally, then made available to every
 # user via /usr/local so Codespaces prebuilds and post-create scripts share
@@ -313,10 +327,25 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages pipx && \
 # -----------------------------------------------------------------------------
 # 4. Node.js LTS, npm, pnpm, yarn
 # -----------------------------------------------------------------------------
+# NodeSource's own setup_${NODE_MAJOR}.x script (curl | bash) does nothing
+# more than add their GPG key and an apt source entry — the same shape as
+# the Docker CLI, GitHub CLI, and PostgreSQL setup blocks elsewhere in this
+# stage. Piping a remote script into bash is one of the few places in this
+# file that executed arbitrary remote code sight-unseen rather than adding
+# a package source the same explicit way everything else here does, so it's
+# replaced with the manual equivalent NodeSource itself documents at
+# https://github.com/nodesource/distributions/wiki/Repository-Manual-Installation.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
-    curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    chmod a+r /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] \
+https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends nodejs && \
     corepack enable && \
     corepack prepare pnpm@latest --activate && \
@@ -326,16 +355,19 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # 5. Flutter + Dart (copied from the flutter-sdk builder stage)
 # -----------------------------------------------------------------------------
 COPY --from=flutter-sdk /opt/flutter-tmp /opt/flutter
-ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}" \
-    PUB_CACHE=/opt/flutter/.pub-cache
+ENV PUB_CACHE=/opt/flutter/.pub-cache
 
 # Pre-fetch platform-independent Flutter/Dart artifacts so first-run inside
 # Codespaces (`flutter doctor`, `flutter pub get`) is fast and works offline
 # for anything that doesn't need Android/iOS toolchains (mobile SDKs are
 # intentionally excluded from this image — see README "What's NOT included").
+#
+# Invoked via absolute path rather than relying on PATH: PATH is defined
+# exactly once, in its final complete form, in section 11 below — Flutter
+# isn't on it yet at this point in the build.
 RUN git config --global --add safe.directory /opt/flutter && \
-    flutter config --no-analytics --no-cli-animations && \
-    flutter precache --universal --no-android --no-ios --no-fuchsia && \
+    /opt/flutter/bin/flutter config --no-analytics --no-cli-animations && \
+    /opt/flutter/bin/flutter precache --universal --no-android --no-ios --no-fuchsia && \
     chmod -R a+rX /opt/flutter
 
 # -----------------------------------------------------------------------------
