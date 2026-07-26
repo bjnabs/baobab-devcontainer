@@ -232,10 +232,10 @@ plugins:
 extra_css:
   - assets/stylesheets/extra.css
 
-# Uncomment when custom JavaScript is introduced.
+# Custom JavaScript is introduced.
 #
-# extra_javascript:
-#   - assets/javascripts/extra.js
+extra_javascript:
+  - assets/javascripts/extra.js
 
 # ------------------------------------------------------------------------------
 # Extra Configuration
