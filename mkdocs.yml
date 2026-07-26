@@ -1,0 +1,328 @@
+```yaml
+# ==============================================================================
+# BAOBAB Development Container
+# ==============================================================================
+#
+# File
+# ----
+# mkdocs.yml
+#
+# Purpose
+# -------
+# Configures the BAOBAB Development Container documentation site.
+#
+# Documentation is authored in Markdown under the 'docs/' directory and is
+# rendered into a static website using MkDocs with the Material theme.
+#
+# The generated site is automatically deployed to GitHub Pages through the
+# GitHub Actions workflow located at:
+#
+#     .github/workflows/pages.yml
+#
+# Documentation Source
+# --------------------
+# docs/
+#
+# Generated Site
+# --------------
+# site/
+#
+# References
+# ----------
+# MkDocs
+# https://www.mkdocs.org/
+#
+# Material for MkDocs
+# https://squidfunk.github.io/mkdocs-material/
+#
+# GitHub Pages
+# https://docs.github.com/pages
+#
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Documentation Directories
+# ------------------------------------------------------------------------------
+
+docs_dir: docs
+site_dir: site
+
+# ------------------------------------------------------------------------------
+# Build Validation
+# ------------------------------------------------------------------------------
+
+strict: true
+
+# ------------------------------------------------------------------------------
+# Live Reload
+# ------------------------------------------------------------------------------
+
+watch:
+  - docs
+  - mkdocs.yml
+
+# ------------------------------------------------------------------------------
+# Excluded Documentation
+#
+# Reserved for future documentation development.
+# ------------------------------------------------------------------------------
+
+exclude_docs: |
+  drafts/
+  templates/
+  snippets/
+
+# ------------------------------------------------------------------------------
+# Site Information
+# ------------------------------------------------------------------------------
+
+site_name: BAOBAB Development Container
+
+site_description: >
+  Enterprise-grade, reproducible development environment for the
+  BAOBAB Enterprise Platform.
+
+site_author: Nabhold
+
+site_url: https://nabhold.github.io/baobab-devcontainer/
+
+repo_name: nabhold/baobab-devcontainer
+
+repo_url: https://github.com/nabhold/baobab-devcontainer
+
+edit_uri: edit/main/docs/
+
+copyright: >
+  Copyright © 2026 Nabhold.
+  Licensed under the Apache License 2.0.
+
+# ------------------------------------------------------------------------------
+# Theme
+# ------------------------------------------------------------------------------
+
+theme:
+  name: material
+
+  language: en
+
+  logo: assets/images/logo.png
+
+  favicon: assets/images/favicon.png
+
+  features:
+
+    # Navigation
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+
+    # Table of Contents
+    - toc.follow
+
+    # Search
+    - search.highlight
+    - search.share
+    - search.suggest
+
+    # Content
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - content.tooltips
+
+  palette:
+
+    # Light Mode
+    - scheme: default
+      primary: green
+      accent: green
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # Dark Mode
+    - scheme: slate
+      primary: green
+      accent: green
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+# ------------------------------------------------------------------------------
+# Markdown Extensions
+# ------------------------------------------------------------------------------
+
+markdown_extensions:
+
+  - admonition
+
+  - attr_list
+
+  - md_in_html
+
+  - tables
+
+  - footnotes
+
+  - toc:
+      permalink: true
+
+  - pymdownx.details
+
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+  - pymdownx.tabbed:
+      alternate_style: true
+
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+
+  - pymdownx.inlinehilite
+
+  - pymdownx.snippets
+
+  - pymdownx.keys
+
+  - pymdownx.magiclink
+
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+# ------------------------------------------------------------------------------
+# Plugins
+# ------------------------------------------------------------------------------
+
+plugins:
+
+  - search:
+      lang: en
+
+  - mermaid2
+
+  - redirects
+
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+      type: datetime
+
+  - minify:
+      minify_html: true
+
+# ------------------------------------------------------------------------------
+# Additional Assets
+# ------------------------------------------------------------------------------
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+# Uncomment when custom JavaScript is introduced.
+#
+# extra_javascript:
+#   - assets/javascripts/extra.js
+
+# ------------------------------------------------------------------------------
+# Extra Configuration
+# ------------------------------------------------------------------------------
+
+extra:
+
+  # Hide the default "Made with Material for MkDocs" footer.
+  generator: false
+
+  social:
+
+    - icon: fontawesome/brands/github
+      link: https://github.com/nabhold
+
+# ------------------------------------------------------------------------------
+# Navigation
+# ------------------------------------------------------------------------------
+
+nav:
+
+  - Home: index.md
+
+  - Introduction:
+      - Overview: overview.md
+      - Key Features: key-features.md
+      - Design Principles: design-principles.md
+      - Supported Platforms: supported-platforms.md
+      - What's Included: whats-included.md
+      - What's Not Included: whats-not-included.md
+
+  - Architecture:
+      - Repository Structure: repository-structure.md
+      - Version Management: version-management.md
+      - Image Architecture: image-architecture.md
+      - Toolchain: toolchain.md
+      - Build Process: build-process.md
+
+  - Usage:
+      - Running Locally: running-locally.md
+      - GitHub Codespaces: github-codespaces.md
+      - VS Code Dev Containers: vscode-dev-containers.md
+
+  - Reference:
+      - Build Arguments: build-arguments.md
+      - Environment Variables: environment-variables.md
+      - Helper Commands: helper-commands.md
+      - Build Verification: build-verification.md
+      - Health Checks: health-checks.md
+
+  - Project:
+      - Security: security.md
+      - Contributing: contributing.md
+      - Roadmap: roadmap.md
+
+  - Appendix:
+      - FAQ: appendix/faq.md
+      - Glossary: appendix/glossary.md
+      - Common Commands: appendix/common-commands.md
+      - External References: appendix/external-references.md
+      - Support: appendix/support.md
+      - Acknowledgements: appendix/acknowledgements.md
+
+# ------------------------------------------------------------------------------
+# Validation
+# ------------------------------------------------------------------------------
+
+validation:
+
+  omitted_files: warn
+
+  absolute_links: warn
+
+  unrecognized_links: warn
+
+  anchors: warn
+
+# ------------------------------------------------------------------------------
+# Future Enhancements
+#
+# Planned additions:
+#
+# • Analytics
+# • Social preview cards
+# • Versioned documentation
+# • Custom 404 page
+# • Documentation blog
+#
+# ------------------------------------------------------------------------------
+```
