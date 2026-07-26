@@ -73,40 +73,40 @@ The `docs/` directory is designed to be published through **GitHub Pages**, maki
 
 ### Introduction
 
-* [Overview](docs/overview.md)
-* [Key Features](docs/key-features.md)
-* [Design Principles](docs/design-principles.md)
-* [Supported Platforms](docs/supported-platforms.md)
-* [What's Included](docs/whats-included.md)
-* [What's Not Included](docs/whats-not-included.md)
+* [Overview](docs/introduction/overview.md)
+* [Key Features](docs/introduction/key-features.md)
+* [Design Principles](docs/introduction/design-principles.md)
+* [Supported Platforms](docs/introduction/supported-platforms.md)
+* [What's Included](docs/introduction/included.md)
+* [What's Not Included](docs/introduction/excluded.md)
 
 ### Architecture
 
-* [Repository Structure](docs/repository-structure.md)
-* [Version Management](docs/version-management.md)
-* [Image Architecture](docs/image-architecture.md)
-* [Toolchain](docs/toolchain.md)
-* [Build Process](docs/build-process.md)
+* [Repository Structure](docs/architecture/repository-structure.md)
+* [Version Management](docs/architecture/version-management.md)
+* [Image Architecture](docs/architecture/image-architecture.md)
+* [Toolchain](docs/architecture/toolchain.md)
+* [Build Process](docs/architecture/build-process.md)
 
 ### Usage
 
-* [Running Locally](docs/running-locally.md)
-* [GitHub Codespaces](docs/github-codespaces.md)
-* [VS Code Dev Containers](docs/vscode-dev-containers.md)
+* [Running Locally](docs/usage/running-locally.md)
+* [GitHub Codespaces](docs/usage/github-codespaces.md)
+* [VS Code Dev Containers](docs/usage/vscode-devcontainers.md)
 
 ### Reference
 
-* [Build Arguments](docs/build-arguments.md)
-* [Environment Variables](docs/environment-variables.md)
-* [Helper Commands](docs/helper-commands.md)
-* [Build Verification](docs/build-verification.md)
-* [Health Checks](docs/health-checks.md)
+* [Build Arguments](docs/reference/build-arguments.md)
+* [Environment Variables](docs/reference/environment-variables.md)
+* [Helper Commands](docs/reference/helper-commands.md)
+* [Build Verification](docs/reference/build-verification.md)
+* [Health Checks](docs/reference/health-checks.md)
 
 ### Project
 
-* [Security](docs/security.md)
-* [Contributing](docs/contributing.md)
-* [Roadmap](docs/roadmap.md)
+* [Security](docs/project/security.md)
+* [Contributing](docs/project/contributing.md)
+* [Roadmap](docs/project/roadmap.md)
 * [License](LICENSE)
 
 ### Appendix
