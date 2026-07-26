@@ -1,4 +1,4 @@
-```toml
+
 # ==============================================================================
 # BAOBAB Development Container
 # ==============================================================================
@@ -168,4 +168,3 @@ docs = [
 
 # This repository is infrastructure rather than a distributable Python package.
 package = false
-```
