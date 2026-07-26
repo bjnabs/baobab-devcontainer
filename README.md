@@ -2,16 +2,16 @@
 
 > **Enterprise-grade, reproducible development environment for the BAOBAB Enterprise Platform.**
 
-<!-- Badges -->
+<!-- Project Badges -->
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420?logo=ubuntu\&logoColor=white)](https://ubuntu.com/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker\&logoColor=white)](https://www.docker.com/)
-[![Dev Containers](https://img.shields.io/badge/Dev%20Containers-Supported-0A84FF?logo=visualstudiocode\&logoColor=white)](https://containers.dev/)
+[![Dev Containers](https://img.shields.io/badge/Dev%20Containers-Supported-007ACC?logo=visualstudiocode\&logoColor=white)](https://containers.dev/)
 [![GitHub Codespaces](https://img.shields.io/badge/GitHub-Codespaces-181717?logo=github\&logoColor=white)](https://github.com/features/codespaces)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/<OWNER>/<REPOSITORY>/build.yml?branch=main\&label=Build)](https://github.com/<OWNER>/<REPOSITORY>/actions)
-[![Latest Release](https://img.shields.io/github/v/release/<OWNER>/<REPOSITORY>?label=Release)](https://github.com/<OWNER>/<REPOSITORY>/releases)
-[![OCI Image](https://img.shields.io/badge/OCI-Container%20Image-5A29E4)](https://github.com/<OWNER>/<REPOSITORY>/pkgs/container)
+[![Build Status](https://github.com/nabhold/baobab-devcontainer/actions/workflows/publish.yml/badge.svg)](https://github.com/nabhold/baobab-devcontainer/actions/workflows/publish.yml)
+[![Latest Release](https://img.shields.io/github/v/release/nabhold/baobab-devcontainer?label=Release)](https://github.com/nabhold/baobab-devcontainer/releases)
+[![Container Registry](https://img.shields.io/badge/GitHub%20Container%20Registry-GHCR-2ea44f?logo=github)](https://github.com/nabhold/baobab-devcontainer/pkgs/container/baobab-devcontainer)
 [![Platform](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-success)](#supported-platforms)
 
 The **BAOBAB Development Container** provides a deterministic, version-controlled, and enterprise-ready development environment for the **BAOBAB Enterprise Platform**. It enables developers to work from an identical software stack whether using local Docker, Visual Studio Code Dev Containers, GitHub Codespaces, or Continuous Integration (CI) pipelines.
@@ -20,18 +20,20 @@ Designed around **Infrastructure as Code (IaC)** principles, the project elimina
 
 Unlike traditional development environments that require manual installation and ongoing maintenance, BAOBAB delivers a fully configured workspace that is consistent across machines, operating systems, and team members. This reduces onboarding time, improves collaboration, and ensures that development, testing, and automation all execute against the same trusted foundation.
 
+---
+
 ## Why BAOBAB?
 
 Modern software development often suffers from inconsistent tooling, undocumented workstation configuration, and environment-specific issues that are difficult to reproduce.
 
 The BAOBAB Development Container addresses these challenges by providing:
 
-* **Deterministic builds** through centralized version management.
-* **Reproducible environments** across local development, Codespaces, and CI.
-* **Enterprise-grade architecture** based on Infrastructure as Code principles.
-* **Automated verification** to ensure every published image is complete and consistent.
-* **A minimal, maintainable toolchain** focused on modern application development.
-* **Clear separation of concerns** between infrastructure, configuration, and version management.
+* Deterministic builds through centralized version management.
+* Reproducible environments across local development, GitHub Codespaces, Visual Studio Code Dev Containers, and CI.
+* Enterprise-grade architecture based on Infrastructure as Code principles.
+* Automated verification to ensure every published image is complete and consistent.
+* A minimal, maintainable toolchain focused on modern application development.
+* Clear separation of concerns between infrastructure, configuration, and version management.
 
 The result is a development platform that is predictable, maintainable, and scalable for both individual developers and engineering teams.
 
@@ -56,14 +58,14 @@ Detailed setup instructions are available in the **Usage** section of this docum
 
 ---
 
-## Documentation
+📖 **Documentation:** https://nabhold.github.io/baobab-devcontainer/
 
-The repository documentation is organised into two parts:
+This repository follows a documentation-first approach.
 
-* **README.md** — A high-level overview and entry point for the project.
-* **`docs/`** — Comprehensive technical documentation covering architecture, usage, reference material, and project governance.
+* **README.md** serves as the project's landing page and provides a high-level overview.
+* **`docs/`** contains the complete technical documentation covering architecture, usage, reference material, project governance, and operational guidance.
 
-When published through **GitHub Pages**, the `docs/` directory becomes the project's complete documentation site.
+The `docs/` directory is designed to be published through **GitHub Pages**, making the documentation easily accessible online while keeping the repository's landing page concise and approachable.
 
 ---
 
@@ -109,17 +111,10 @@ When published through **GitHub Pages**, the `docs/` directory becomes the proje
 
 ### Appendix
 
-* [FAQ](docs/appendix/faq.md)
-* [Glossary](docs/appendix/glossary.md)
-* [Common Commands](docs/appendix/common-commands.md)
-* [External References](docs/appendix/external-references.md)
-* [Support](docs/appendix/support.md)
+* FAQ *(coming soon)*
+* Glossary *(coming soon)*
+* Common Commands *(coming soon)*
+* External References *(coming soon)*
+* Support *(coming soon)*
 * [Changelog](CHANGELOG.md)
-* [Acknowledgements](docs/appendix/acknowledgements.md)
-
----
-
-> **Note**
->
-> Replace the placeholder values (`<OWNER>`, `<REPOSITORY>`, and the GitHub Actions workflow filename) with your actual GitHub repository details. Once those are updated, the badges will automatically display the current build status, latest release, and published OCI image information.
-
+* Acknowledgements *(coming soon)*
