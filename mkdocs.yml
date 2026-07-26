@@ -1,4 +1,4 @@
-```yaml
+
 # ==============================================================================
 # BAOBAB Development Container
 # ==============================================================================
@@ -260,36 +260,36 @@ nav:
   - Home: index.md
 
   - Introduction:
-      - Overview: overview.md
-      - Key Features: key-features.md
-      - Design Principles: design-principles.md
-      - Supported Platforms: supported-platforms.md
-      - What's Included: whats-included.md
-      - What's Not Included: whats-not-included.md
+      - Overview: introduction/overview.md
+      - Key Features: introduction/key-features.md
+      - Design Principles: introduction/design-principles.md
+      - Supported Platforms: introduction/supported-platforms.md
+      - What's Included: introduction/included.md
+      - What's Not Included: introduction/excluded.md
 
   - Architecture:
-      - Repository Structure: repository-structure.md
-      - Version Management: version-management.md
-      - Image Architecture: image-architecture.md
-      - Toolchain: toolchain.md
-      - Build Process: build-process.md
+      - Repository Structure: architecture/repository-structure.md
+      - Version Management: architecture/version-management.md
+      - Image Architecture: architecture/image-architecture.md
+      - Toolchain: architecture/toolchain.md
+      - Build Process: architecture/build-process.md
 
   - Usage:
-      - Running Locally: running-locally.md
-      - GitHub Codespaces: github-codespaces.md
-      - VS Code Dev Containers: vscode-dev-containers.md
+      - Running Locally: usage/running-locally.md
+      - GitHub Codespaces: usage/github-codespaces.md
+      - VS Code Dev Containers: usage/vscode-devcontainers.md
 
   - Reference:
-      - Build Arguments: build-arguments.md
-      - Environment Variables: environment-variables.md
-      - Helper Commands: helper-commands.md
-      - Build Verification: build-verification.md
-      - Health Checks: health-checks.md
+      - Build Arguments: reference/build-arguments.md
+      - Environment Variables: reference/environment-variables.md
+      - Helper Commands: reference/helper-commands.md
+      - Build Verification: reference/build-verification.md
+      - Health Checks: reference/health-checks.md
 
   - Project:
-      - Security: security.md
-      - Contributing: contributing.md
-      - Roadmap: roadmap.md
+      - Security: project/security.md
+      - Contributing: project/contributing.md
+      - Roadmap: project/roadmap.md
 
   - Appendix:
       - FAQ: appendix/faq.md
@@ -325,4 +325,4 @@ validation:
 # • Documentation blog
 #
 # ------------------------------------------------------------------------------
-```
+
