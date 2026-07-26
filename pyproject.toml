@@ -1,0 +1,171 @@
+```toml
+# ==============================================================================
+# BAOBAB Development Container
+# ==============================================================================
+#
+# Project Configuration
+#
+# This file defines the Python project metadata and dependency groups used by
+# the BAOBAB Development Container.
+#
+# Although this repository is not a distributable Python package, Python is
+# used to support project tooling such as documentation generation, validation,
+# and automation.
+#
+# Dependency Management
+# ---------------------
+#
+# Dependencies are managed exclusively with:
+#
+#     uv
+#
+# A deterministic dependency graph is stored in:
+#
+#     uv.lock
+#
+# Contributors should never edit uv.lock manually.
+# Whenever this file changes, regenerate the lock file:
+#
+#     uv lock
+#
+# Commit both files together:
+#
+#     pyproject.toml
+#     uv.lock
+#
+# Documentation Workflow
+# ----------------------
+#
+# GitHub Actions installs only the documentation dependency group:
+#
+#     uv sync --locked --group docs
+#
+# ==============================================================================
+
+[project]
+name = "baobab-devcontainer"
+version = "0.1.0"
+
+description = "Enterprise-grade, reproducible development container for the BAOBAB Enterprise Platform."
+
+readme = "README.md"
+
+requires-python = ">=3.13"
+
+license = { text = "Apache-2.0" }
+
+authors = [
+    { name = "Nabhold" }
+]
+
+keywords = [
+    "devcontainer",
+    "docker",
+    "codespaces",
+    "github-pages",
+    "infrastructure",
+    "mkdocs",
+    "automation",
+    "development",
+    "container"
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Documentation",
+    "Topic :: Software Development",
+]
+
+# ------------------------------------------------------------------------------
+# Project URLs
+# ------------------------------------------------------------------------------
+
+[project.urls]
+Homepage = "https://github.com/nabhold/baobab-devcontainer"
+Repository = "https://github.com/nabhold/baobab-devcontainer"
+Documentation = "https://nabhold.github.io/baobab-devcontainer/"
+Issues = "https://github.com/nabhold/baobab-devcontainer/issues"
+Releases = "https://github.com/nabhold/baobab-devcontainer/releases"
+Changelog = "https://github.com/nabhold/baobab-devcontainer/blob/main/CHANGELOG.md"
+
+# ------------------------------------------------------------------------------
+# Dependency Groups
+#
+# Separate dependency groups allow tooling to be installed only when required.
+# The GitHub Pages workflow installs only the 'docs' group.
+# ------------------------------------------------------------------------------
+
+[dependency-groups]
+
+docs = [
+
+    # --------------------------------------------------------------------------
+    # Static Site Generator
+    # --------------------------------------------------------------------------
+
+    "mkdocs>=1.6,<2.0",
+
+    # --------------------------------------------------------------------------
+    # Material Theme
+    # --------------------------------------------------------------------------
+
+    "mkdocs-material>=9.6,<10.0",
+
+    # --------------------------------------------------------------------------
+    # Markdown Enhancements
+    # --------------------------------------------------------------------------
+
+    "pymdown-extensions>=10.16,<11.0",
+
+    # --------------------------------------------------------------------------
+    # Mermaid Diagram Support
+    # --------------------------------------------------------------------------
+
+    "mkdocs-mermaid2-plugin>=1.2,<2.0",
+
+    # --------------------------------------------------------------------------
+    # Automatic "Last Updated" Information
+    # --------------------------------------------------------------------------
+
+    "mkdocs-git-revision-date-localized-plugin>=1.4,<2.0",
+
+    # --------------------------------------------------------------------------
+    # Redirect Support
+    # --------------------------------------------------------------------------
+
+    "mkdocs-redirects>=1.2,<2.0",
+
+    # --------------------------------------------------------------------------
+    # HTML Minification
+    # --------------------------------------------------------------------------
+
+    "mkdocs-minify-plugin>=0.8,<1.0",
+]
+
+# ------------------------------------------------------------------------------
+# Future Dependency Groups
+#
+# These groups are intentionally omitted until they are required.
+#
+# Examples:
+#
+# lint
+# spell
+# links
+# test
+#
+# Keeping the project minimal reduces maintenance overhead.
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# uv Configuration
+# ------------------------------------------------------------------------------
+
+[tool.uv]
+
+# This repository is infrastructure rather than a distributable Python package.
+package = false
+```
