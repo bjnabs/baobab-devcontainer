@@ -6,7 +6,12 @@
 # File: config/resolve.sh
 #
 # Purpose:
-#   Reads config/versions.yaml and generates config/versions.lock.
+#   Reads config/versions.yaml and generates:
+#     - config/versions.lock (consumed by the Dockerfile and helper scripts)
+#     - .python-version at the repository root (consumed by uv, so the local
+#       Python toolchain used for docs/testing stays pinned to the exact
+#       same minor version the container itself ships, without a second
+#       hand-maintained copy of that version anywhere)
 #
 # Requirements:
 #   - bash
@@ -25,9 +30,11 @@ set -Eeuo pipefail
 # ------------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 MANIFEST="${SCRIPT_DIR}/versions.yaml"
 LOCKFILE="${SCRIPT_DIR}/versions.lock"
+PYTHON_VERSION_FILE="${REPO_ROOT}/.python-version"
 
 # ------------------------------------------------------------------------------
 # Logging
@@ -197,8 +204,31 @@ chmod 644 "$LOCKFILE"
 
 info "Generated ${LOCKFILE}"
 
+# ------------------------------------------------------------------------------
+# Generate .python-version
+#
+# uv reads this file to select/provision the local Python toolchain used
+# for docs and testing, so it stays pinned to the exact minor version the
+# container itself installs without a second hand-maintained copy of that
+# version anywhere. Major.minor only (e.g. "3.14"), matching the same
+# derivation the Dockerfile uses for its own PYTHON_MINOR — apt package
+# names and uv's version pinning both work on major.minor, not the full
+# patch version.
+# ------------------------------------------------------------------------------
+
+PYTHON_MINOR="${PYTHON_VERSION%.*}"
+
+printf '%s\n' "${PYTHON_MINOR}" > "${PYTHON_VERSION_FILE}"
+
+chmod 644 "${PYTHON_VERSION_FILE}"
+
+info "Generated ${PYTHON_VERSION_FILE} (${PYTHON_MINOR})"
+
 echo
 cat "$LOCKFILE"
+echo
+echo "${PYTHON_VERSION_FILE}:"
+cat "${PYTHON_VERSION_FILE}"
 echo
 
 info "Version resolution complete."
