@@ -5,6 +5,10 @@
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
+         <loc>https://nabhold.github.io/baobab-devcontainer/appendix/</loc>
+         <lastmod>2026-07-27</lastmod>
+    </url>
+    <url>
          <loc>https://nabhold.github.io/baobab-devcontainer/appendix/acknowledgements/</loc>
          <lastmod>2026-07-27</lastmod>
     </url>
@@ -29,7 +33,15 @@
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
+         <loc>https://nabhold.github.io/baobab-devcontainer/architecture/</loc>
+         <lastmod>2026-07-27</lastmod>
+    </url>
+    <url>
          <loc>https://nabhold.github.io/baobab-devcontainer/architecture/build-process/</loc>
+         <lastmod>2026-07-27</lastmod>
+    </url>
+    <url>
+         <loc>https://nabhold.github.io/baobab-devcontainer/architecture/design-principles/</loc>
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
@@ -49,7 +61,7 @@
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
-         <loc>https://nabhold.github.io/baobab-devcontainer/introduction/design-principles/</loc>
+         <loc>https://nabhold.github.io/baobab-devcontainer/introduction/</loc>
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
@@ -77,6 +89,10 @@
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
+         <loc>https://nabhold.github.io/baobab-devcontainer/project/</loc>
+         <lastmod>2026-07-27</lastmod>
+    </url>
+    <url>
          <loc>https://nabhold.github.io/baobab-devcontainer/project/contributing/</loc>
          <lastmod>2026-07-27</lastmod>
     </url>
@@ -90,6 +106,10 @@
     </url>
     <url>
          <loc>https://nabhold.github.io/baobab-devcontainer/project/security/</loc>
+         <lastmod>2026-07-27</lastmod>
+    </url>
+    <url>
+         <loc>https://nabhold.github.io/baobab-devcontainer/reference/</loc>
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
@@ -110,6 +130,10 @@
     </url>
     <url>
          <loc>https://nabhold.github.io/baobab-devcontainer/reference/helper-commands/</loc>
+         <lastmod>2026-07-27</lastmod>
+    </url>
+    <url>
+         <loc>https://nabhold.github.io/baobab-devcontainer/usage/</loc>
          <lastmod>2026-07-27</lastmod>
     </url>
     <url>
