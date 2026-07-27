@@ -75,7 +75,7 @@ The `docs/` directory is designed to be published through **GitHub Pages**, maki
 
 * [Overview](docs/introduction/overview.md)
 * [Key Features](docs/introduction/key-features.md)
-* [Design Principles](docs/introduction/design-principles.md)
+* [Design Principles](docs/architecture/design-principles.md)
 * [Supported Platforms](docs/introduction/supported-platforms.md)
 * [What's Included](docs/introduction/included.md)
 * [What's Not Included](docs/introduction/excluded.md)
