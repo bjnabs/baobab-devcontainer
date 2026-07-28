@@ -126,10 +126,8 @@ RUN set -euo pipefail; \
           "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"; \
         tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-tmp --strip-components=1; \
         rm -f /tmp/flutter.tar.xz; \
-        # .git is not present in the tarball distribution and isn't needed;
-        # docs aren't needed at runtime either. Both safe to drop to shrink
-        # the layer.
-        rm -rf /opt/flutter-tmp/.git /opt/flutter-tmp/packages/flutter/doc \
+        # .git MUST be kept so flutter precache can resolve the engine commit revision.
+        rm -rf /opt/flutter-tmp/packages/flutter/doc \
         ;; \
       arm64) \
         git init -q /opt/flutter-tmp; \
@@ -472,7 +470,7 @@ RUN if id "ubuntu" &>/dev/null; then userdel -r ubuntu; fi && \
     mkdir -p /workspaces /home/vscode/.local/bin && \
     chown -R vscode:vscode /workspaces /home/vscode
 
-    
+
 # -----------------------------------------------------------------------------
 # 11. Global environment configuration
 # -----------------------------------------------------------------------------
