@@ -265,26 +265,30 @@ nav:
   - Home: index.md
 
   - Introduction:
+      - Introduction: introduction/index.md
       - Overview: introduction/overview.md
       - Key Features: introduction/key-features.md
-      - Design Principles: introduction/design-principles.md
       - Supported Platforms: introduction/supported-platforms.md
       - What's Included: introduction/included.md
       - What's Not Included: introduction/excluded.md
 
   - Architecture:
+      - Architecture: architecture/index.md
       - Repository Structure: architecture/repository-structure.md
+      - Design Principles: architecture/design-principles.md
       - Version Management: architecture/version-management.md
       - Image Architecture: architecture/image-architecture.md
       - Toolchain: architecture/toolchain.md
       - Build Process: architecture/build-process.md
 
   - Usage:
+      - Usage: usage/index.md
       - Running Locally: usage/running-locally.md
       - GitHub Codespaces: usage/github-codespaces.md
       - VS Code Dev Containers: usage/vscode-devcontainers.md
 
   - Reference:
+      - Reference: reference/index.md
       - Build Arguments: reference/build-arguments.md
       - Environment Variables: reference/environment-variables.md
       - Helper Commands: reference/helper-commands.md
@@ -292,11 +296,19 @@ nav:
       - Health Checks: reference/health-checks.md
 
   - Project:
+      - Project: project/index.md
       - Security: project/security.md
       - Contributing: project/contributing.md
       - Roadmap: project/roadmap.md
+      - License: project/license.md
+      - Copyright: project/copyright.md
+      - Authors: project/authors.md
+      - Contributors: project/contributors.md
+      - Code of Conduct: project/code-of-conduct.md
+
 
   - Appendix:
+      - Appendix: appendix/index.md
       - FAQ: appendix/faq.md
       - Glossary: appendix/glossary.md
       - Common Commands: appendix/common-commands.md
