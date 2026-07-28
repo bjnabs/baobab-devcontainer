@@ -53,18 +53,17 @@
 [project]
 name = "baobab-devcontainer"
 version = "0.1.0"
-
 description = "Enterprise-grade, reproducible development container for the BAOBAB Enterprise Platform."
-
 readme = "README.md"
 
 # Matches config/versions.yaml's pinned languages.python.version (3.14.x) —
 # the same version the container itself ships. Keep these in sync by hand,
 # the same way UBUNTU_VERSION is kept in sync between versions.yaml and the
 # Dockerfile's ARG default.
+
 requires-python = ">=3.14"
 
-license = { text = "Apache-2.0" }
+license = { file = "LICENSE" }
 
 authors = [
     { name = "Nabhold" }
