@@ -522,7 +522,7 @@ RUN poetry config virtualenvs.in-project true
 # Runs as `vscode`, after the USER switch above, since baobab-verify checks
 # the runtime user identity.
 # -----------------------------------------------------------------------------
-RUN baobab-verify --quiet
+RUN baobab-verify 
 
 HEALTHCHECK \
     --interval=60s \
