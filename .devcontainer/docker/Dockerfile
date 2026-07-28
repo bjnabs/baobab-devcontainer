@@ -529,6 +529,6 @@ HEALTHCHECK \
     --timeout=10s \
     --start-period=15s \
     --retries=3 \
-    CMD baobab-verify --quiet || exit 1
+    CMD baobab-verify || exit 1
 
 CMD ["sleep", "infinity"]
