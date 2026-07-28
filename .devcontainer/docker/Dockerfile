@@ -93,20 +93,30 @@ COPY config/versions.lock /tmp/baobab-config/versions.lock
 #
 # Per Flutter's own guidance for ARM64 Linux hosts (Raspberry Pi, Ampere
 # Altra, Apple Silicon Linux VMs, GitHub's ubuntu-*-arm runners, etc.), the
-# supported path there is different: clone the flutter/flutter repository
+# supported path there is different: fetch the flutter/flutter repository
 # directly. The `flutter` tool detects the host architecture itself and
 # fetches the matching engine/Dart SDK artifacts on first invocation
 # (triggered later, in the final stage's `flutter precache` step) — so no
 # manual per-arch URL construction is needed or possible for arm64.
 #
-# The arm64 fetch uses an explicit `refs/tags/<version>` refspec rather than
-# `git clone --branch <version>`. Several past Flutter releases have shipped
-# a branch with the same name as their release tag (see
-# https://github.com/flutter/flutter/issues/104901); `--branch` can silently
-# resolve to that branch instead of the tag, leaving `flutter --version`
-# reporting "0.0.0-unknown". An explicit `refs/tags/` source refspec on
-# `git fetch` cannot be redirected to a same-named branch, so this is
-# correct regardless of any future naming collision.
+# Shallow Fetch Mechanics & Tag Collisions (ARM64):
+# 1. Past Flutter releases have shipped branches with the exact same name as
+#    their release tags (see https://github.com/flutter/flutter/issues/104901).
+#    Using `git clone --branch <version>` can silently resolve to the branch
+#    instead of the tag, leaving `flutter --version` reporting "0.0.0-unknown".
+# 2. Flutter release tags are annotated Git tags (pointing to a tag object,
+#    which in turn points to a commit object). Performing a shallow fetch
+#    (`--depth 1`) with an explicit refspec mapping like `refs/tags/V:refs/tags/V`
+#    fetches only the raw tag object without dereferencing the underlying
+#    commit, causing subsequent `git checkout` calls to fail with
+#    "fatal: reference is not a tree".
+#
+# To resolve both constraints cleanly:
+# We invoke `git fetch --depth 1 origin tag "${FLUTTER_VERSION}"`. Explicitly
+# using the `tag` specifier prevents collision with same-named branches, while
+# Git automatically dereferences the annotated tag and fetches its target
+# commit into FETCH_HEAD. Checking out FETCH_HEAD and pointing a local tag to
+# it gives `flutter` a complete 1-commit version history without error.
 RUN set -euo pipefail; \
     . /tmp/baobab-config/versions.lock; \
     mkdir -p /opt/flutter-tmp; \
@@ -124,15 +134,16 @@ RUN set -euo pipefail; \
       arm64) \
         git init -q /opt/flutter-tmp; \
         git -C /opt/flutter-tmp remote add origin https://github.com/flutter/flutter.git; \
-        git -C /opt/flutter-tmp fetch --depth 1 origin \
-          "refs/tags/${FLUTTER_VERSION}:refs/tags/${FLUTTER_VERSION}"; \
-        git -C /opt/flutter-tmp checkout -q "${FLUTTER_VERSION}"; \
-        # .git MUST be kept here — the flutter tool reads it to resolve its
-        # own version/channel. Docs are still safe to drop.
+        git -C /opt/flutter-tmp fetch --depth 1 origin tag "${FLUTTER_VERSION}"; \
+        git -C /opt/flutter-tmp checkout -q FETCH_HEAD; \
+        git -C /opt/flutter-tmp tag -f "${FLUTTER_VERSION}" FETCH_HEAD; \
+        # .git MUST be kept here — the flutter tool reads git metadata on arm64
+        # to resolve its own version and channel state. Docs are safe to drop.
         rm -rf /opt/flutter-tmp/packages/flutter/doc \
         ;; \
       *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
     esac
+
 
 # -----------------------------------------------------------------------------
 # Stage: cli-tools — fetch pinned Rust/Go CLI utilities from GitHub Releases
@@ -358,10 +369,23 @@ ENV PUB_CACHE=/opt/flutter/.pub-cache
 # for anything that doesn't need Android/iOS toolchains (mobile SDKs are
 # intentionally excluded from this image — see README "What's NOT included").
 #
+# Git Safe Directory Scope & Multi-User Context:
+# Running `git config --global` during image construction writes directives
+# exclusively to `/root/.gitconfig`. When non-root container runtimes (such
+# as the default `vscode` user or runtime healthcheck processes) execute `flutter`
+# or `dart` commands later, Git ignores `/root/.gitconfig`. Because `/opt/flutter`
+# retains `.git` metadata (required on ARM64 for Flutter to query its own version
+# and release channel), Git flags `/opt/flutter` with a "fatal: detected dubious
+# ownership" error for any actor other than `root`.
+#
+# Configuring `safe.directory` at the system level (`git config --system`, stored in
+# `/etc/gitconfig`) guarantees that both `root` during remaining build stages and
+# unprivileged runtime users inherit trusted access to `/opt/flutter` seamlessly.
+#
 # Invoked via absolute path rather than relying on PATH: PATH is defined
 # exactly once, in its final complete form, in section 11 below — Flutter
 # isn't on it yet at this point in the build.
-RUN git config --global --add safe.directory /opt/flutter && \
+RUN git config --system --add safe.directory /opt/flutter && \
     /opt/flutter/bin/flutter config --no-analytics --no-cli-animations && \
     /opt/flutter/bin/flutter precache --universal --no-android --no-ios --no-fuchsia && \
     chmod -R a+rX /opt/flutter
