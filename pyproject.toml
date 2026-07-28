@@ -1,4 +1,3 @@
-
 # ==============================================================================
 # BAOBAB Development Container
 # ==============================================================================
@@ -9,8 +8,8 @@
 # the BAOBAB Development Container.
 #
 # Although this repository is not a distributable Python package, Python is
-# used to support project tooling such as documentation generation, validation,
-# and automation.
+# used to support project tooling such as documentation generation, local
+# testing, validation, and automation.
 #
 # Dependency Management
 # ---------------------
@@ -33,12 +32,21 @@
 #     pyproject.toml
 #     uv.lock
 #
-# Documentation Workflow
-# ----------------------
+# Dependency Groups
+# -----------------
 #
-# GitHub Actions installs only the documentation dependency group:
+# dev   Local test/tooling harness (pytest, plus pyyaml/requests for
+#       prototyping and validating things like checksum verification against
+#       upstream sources before that logic is ported into resolve.sh / the
+#       Dockerfile). Installed with:
 #
-#     uv sync --locked --group docs
+#           uv sync --locked --group dev
+#           uv run --group dev pytest
+#
+# docs  MkDocs + Material toolchain for the documentation site. GitHub
+#       Actions installs only this group for the Pages publish workflow:
+#
+#           uv sync --locked --group docs
 #
 # ==============================================================================
 
@@ -50,7 +58,11 @@ description = "Enterprise-grade, reproducible development container for the BAOB
 
 readme = "README.md"
 
-requires-python = ">=3.13"
+# Matches config/versions.yaml's pinned languages.python.version (3.14.x) —
+# the same version the container itself ships. Keep these in sync by hand,
+# the same way UBUNTU_VERSION is kept in sync between versions.yaml and the
+# Dockerfile's ARG default.
+requires-python = ">=3.14"
 
 license = { text = "Apache-2.0" }
 
@@ -74,7 +86,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Documentation",
     "Topic :: Software Development",
 ]
@@ -100,6 +112,31 @@ Changelog = "https://github.com/nabhold/baobab-devcontainer/blob/main/CHANGELOG.
 
 [dependency-groups]
 
+dev = [
+
+    # --------------------------------------------------------------------------
+    # Local test harness
+    # --------------------------------------------------------------------------
+
+    "pytest>=8.3,<9.0",
+
+    "pytest-cov>=6.0,<7.0",
+
+    # --------------------------------------------------------------------------
+    # Parsing config/versions.yaml when testing resolve.sh's output
+    # --------------------------------------------------------------------------
+
+    "pyyaml>=6.0,<7.0",
+
+    # --------------------------------------------------------------------------
+    # Prototyping/validating checksum + version lookups against GitHub
+    # Releases and Flutter's release manifest before that logic is ported
+    # into resolve.sh / the Dockerfile
+    # --------------------------------------------------------------------------
+
+    "requests>=2.32,<3.0",
+]
+
 docs = [
 
     # --------------------------------------------------------------------------
@@ -118,13 +155,18 @@ docs = [
     # Markdown Enhancements
     # --------------------------------------------------------------------------
 
-    "pymdown-extensions>=10.16,<11.0",
+    "pymdown-extensions>=11.0,<12.0",
 
     # --------------------------------------------------------------------------
-    # Mermaid Diagram Support
+    # Mermaid diagrams use Material's NATIVE integration (see mkdocs.yml's
+    # markdown_extensions -> pymdownx.superfences custom_fences config) —
+    # no separate plugin/package required. mkdocs-mermaid2-plugin is
+    # deliberately NOT included here: per Material's own documentation
+    # (https://squidfunk.github.io/mkdocs-material/reference/diagrams/),
+    # that third-party plugin cannot be used together with
+    # mkdocs-minify-plugin (both are used in mkdocs.yml) and doesn't adapt
+    # to dark mode, which this site's palette toggle relies on.
     # --------------------------------------------------------------------------
-
-    "mkdocs-mermaid2-plugin>=1.2,<2.0",
 
     # --------------------------------------------------------------------------
     # Automatic "Last Updated" Information
@@ -155,10 +197,17 @@ docs = [
 # lint
 # spell
 # links
-# test
 #
 # Keeping the project minimal reduces maintenance overhead.
 # ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# pytest Configuration
+# ------------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
 
 # ------------------------------------------------------------------------------
 # uv Configuration

@@ -1,4 +1,3 @@
-
 # ==============================================================================
 # BAOBAB Development Container
 # ==============================================================================
@@ -180,7 +179,7 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+          format: "!!python/name:pymdownx.superfences.fence_code_format"
 
   - pymdownx.tabbed:
       alternate_style: true
@@ -202,7 +201,7 @@ markdown_extensions:
       custom_checkbox: true
 
   - pymdownx.emoji:
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_generator: "!!python/name:material.extensions.emoji.to_svg"
 
 # ------------------------------------------------------------------------------
 # Plugins
@@ -213,7 +212,13 @@ plugins:
   - search:
       lang: en
 
-  - mermaid2
+  # Mermaid diagrams render via Material's native integration — see
+  # markdown_extensions -> pymdownx.superfences custom_fences below. No
+  # separate plugin is needed. mkdocs-mermaid2-plugin is deliberately NOT
+  # used here: per Material's own docs
+  # (https://squidfunk.github.io/mkdocs-material/reference/diagrams/), it
+  # cannot be used together with the minify plugin below and doesn't adapt
+  # to dark mode, which this site's palette toggle relies on.
 
   - redirects
 
@@ -325,4 +330,3 @@ validation:
 # • Documentation blog
 #
 # ------------------------------------------------------------------------------
-
