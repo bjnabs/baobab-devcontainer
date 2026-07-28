@@ -459,15 +459,20 @@ COPY --from=cli-tools /opt/cli-tools/bin/eza /usr/local/bin/eza
 RUN chmod +x /usr/local/bin/rg /usr/local/bin/fd /usr/local/bin/bat /usr/local/bin/eza
 
 # -----------------------------------------------------------------------------
-# 10. The `vscode` user — UID/GID 1000, passwordless sudo, bash default shell
+# 10. Non-root user creation (vscode:1000)
 # -----------------------------------------------------------------------------
-RUN groupadd --gid 1000 vscode && \
+# Ubuntu 24.04/26.04 base images ship with a default 'ubuntu' user (UID/GID 1000).
+# Remove it first to free up UID/GID 1000 for 'vscode', avoiding exit code 4.
+RUN if id "ubuntu" &>/dev/null; then userdel -r ubuntu; fi && \
+    if getent group ubuntu &>/dev/null; then groupdel ubuntu; fi && \
+    groupadd --gid 1000 vscode && \
     useradd --uid 1000 --gid 1000 --shell /bin/bash --create-home vscode && \
     echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode && \
     chmod 0440 /etc/sudoers.d/vscode && \
     mkdir -p /workspaces /home/vscode/.local/bin && \
     chown -R vscode:vscode /workspaces /home/vscode
 
+    
 # -----------------------------------------------------------------------------
 # 11. Global environment configuration
 # -----------------------------------------------------------------------------
