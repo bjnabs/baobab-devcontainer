@@ -316,7 +316,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         curl -fsSL https://bootstrap.pypa.io/get-pip.py | "python${PYTHON_MINOR}" - --no-cache-dir --break-system-packages; \
     fi && \
     update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${PYTHON_MINOR}" 1 || true && \
-    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1
+    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1 && \
+    update-alternatives --install /usr/bin/python3.14 python3.14 /usr/bin/python3 1
 
 # pipx, uv, Poetry — installed once, globally, then made available to every
 # user via /usr/local so Codespaces prebuilds and post-create scripts share
