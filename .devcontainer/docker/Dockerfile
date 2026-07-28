@@ -292,22 +292,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
     PYTHON_MINOR="${PYTHON_VERSION%.*}" && \
     apt-get update && \
-    if apt-cache show "python${PYTHON_MINOR}" >/dev/null 2>&1; then \
-      echo "python${PYTHON_MINOR} is already available from Ubuntu's own archives; skipping deadsnakes"; \
-    else \
-      echo "python${PYTHON_MINOR} not found in Ubuntu's own archives; adding deadsnakes PPA"; \
-      add-apt-repository -y ppa:deadsnakes/ppa && \
-      apt-get update; \
-    fi && \
     apt-get install -y --no-install-recommends \
-      python${PYTHON_MINOR} \
-      python${PYTHON_MINOR}-venv \
-      python${PYTHON_MINOR}-dev \
+        curl \
+        ca-certificates \
+        python3 \
+        python3-venv \
+        python3-dev \
+        python3-pip \
     && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_MINOR} 1 && \
-    update-alternatives --install /usr/bin/python  python  /usr/bin/python${PYTHON_MINOR} 1 && \
-    curl -fsSL https://bootstrap.pypa.io/get-pip.py | python${PYTHON_MINOR} - --no-cache-dir
-
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_MINOR} 1 || true && \
+    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+    
 # pipx, uv, Poetry — installed once, globally, then made available to every
 # user via /usr/local so Codespaces prebuilds and post-create scripts share
 # a single toolchain install.
@@ -506,6 +502,6 @@ HEALTHCHECK \
     --timeout=10s \
     --start-period=15s \
     --retries=3 \
-    CMD baobab-verify || exit 1
+    CMD baobab-verify --quiet || exit 1
 
 CMD ["sleep", "infinity"]
