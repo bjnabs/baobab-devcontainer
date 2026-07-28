@@ -290,29 +290,34 @@ ENV BAOBAB_CONFIG_DIR=/usr/local/share/baobab/config
 # whether the pin matches the base image's native version or diverges from
 # it — without hard-coding today's specific version/codename pairing.
 #
-# pip is deliberately bootstrapped via get-pip.py rather than apt's
-# python3-pip: Debian/Ubuntu's packaged pip marks itself EXTERNALLY-MANAGED
-# (PEP 668), which then requires --break-system-packages on every pip
-# invocation, including tools that call pip internally. get-pip.py installs
-# a normal, unrestricted pip directly into the pinned interpreter instead.
+# pip is deliberately bootstrapped via get-pip.py on fallback paths rather
+# than apt's python3-pip when deadsnakes is used, ensuring unrestricted pip
+# functionality across different base OS versions.
 # -----------------------------------------------------------------------------
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
     PYTHON_MINOR="${PYTHON_VERSION%.*}" && \
     apt-get update && \
-    apt-get install -y --no-install-recommends \
-        curl \
-        ca-certificates \
-        python3 \
-        python3-venv \
-        python3-dev \
-        python3-pip \
-    && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_MINOR} 1 || true && \
-    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-    
+    apt-get install -y --no-install-recommends curl ca-certificates software-properties-common && \
+    if apt-cache show "python${PYTHON_MINOR}" >/dev/null 2>&1 || apt-cache show python3 >/dev/null 2>&1; then \
+        apt-get install -y --no-install-recommends \
+            python3 \
+            python3-venv \
+            python3-dev \
+            python3-pip; \
+    else \
+        add-apt-repository -y ppa:deadsnakes/ppa && \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            "python${PYTHON_MINOR}" \
+            "python${PYTHON_MINOR}-venv" \
+            "python${PYTHON_MINOR}-dev" && \
+        curl -fsSL https://bootstrap.pypa.io/get-pip.py | "python${PYTHON_MINOR}" - --no-cache-dir --break-system-packages; \
+    fi && \
+    update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${PYTHON_MINOR}" 1 || true && \
+    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1
+
 # pipx, uv, Poetry — installed once, globally, then made available to every
 # user via /usr/local so Codespaces prebuilds and post-create scripts share
 # a single toolchain install.
@@ -328,7 +333,6 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages pipx && \
 # intentionally NOT baked in here — they belong to the project's own
 # pyproject.toml / poetry.lock and are installed by post-create.sh on
 # container creation, keeping this base image framework-version-agnostic.
-
 # -----------------------------------------------------------------------------
 # 4. Node.js LTS, npm, pnpm, yarn
 # -----------------------------------------------------------------------------
