@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# verify.sh (installed as: baobab-verify)
+# scripts/verify.sh (installed as: baobab-verify)
 #
 # Verifies that the BAOBAB development environment is healthy.
 #
@@ -33,6 +33,13 @@ WARN=0
 
 TMP_FLUTTER_LOG="$(mktemp)"
 trap 'rm -f "${TMP_FLUTTER_LOG}"' EXIT
+
+# Safety net: if any command anywhere in this script fails in a way that
+# isn't already caught and reported by check_required/check_optional below,
+# print exactly what failed and where, instead of exiting silently under
+# `set -e`. This is the difference between "exit code: 1, no output" and
+# an actionable diagnostic in the build log.
+trap 'ec=$?; printf "\n\033[1;31mverify.sh: aborted (exit %d) at line %d\033[0m\nCommand: %s\n" "$ec" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
 ###############################################################################
 # Locate configuration
@@ -99,24 +106,46 @@ section() {
 # Helpers
 ###############################################################################
 
+# run_version_cmd: executes "$1" and prints its first line of stdout.
+# Never lets a non-zero exit status propagate to the caller under `set -e` —
+# it captures the outcome explicitly instead. Sets the caller's local
+# variables via the names passed in $2 (output) and $3 (stderr, for
+# diagnostics), and returns the version command's own exit code.
+run_version_cmd() {
+    local version_cmd="$1"
+    local -n _out="$2"
+    local -n _err="$3"
+    local rc
+
+    set +e
+    _out="$(bash -c "$version_cmd" 2>/tmp/baobab-verify-stderr.$$ | head -n1)"
+    rc=$?
+    set -e
+
+    _err="$(cat /tmp/baobab-verify-stderr.$$ 2>/dev/null)"
+    rm -f /tmp/baobab-verify-stderr.$$
+
+    return "$rc"
+}
+
 check_required() {
 
     local label="$1"
     local cmd="$2"
     local version_cmd="${3:-$2 --version}"
 
-    if command -v "$cmd" >/dev/null 2>&1; then
-        local version
-
-        version="$(
-            bash -c "$version_cmd" 2>/dev/null \
-            | head -n1
-        )"
-
-        ok "$label (${version})"
-
-    else
+    if ! command -v "$cmd" >/dev/null 2>&1; then
         bad "$label — '$cmd' not found"
+        return
+    fi
+
+    local version stderr_out rc=0
+    run_version_cmd "$version_cmd" version stderr_out || rc=$?
+
+    if [[ $rc -eq 0 && -n "$version" ]]; then
+        ok "$label (${version})"
+    else
+        bad "$label — '$version_cmd' failed (exit ${rc})${stderr_out:+: ${stderr_out}}"
     fi
 }
 
@@ -126,21 +155,18 @@ check_optional() {
     local cmd="$2"
     local version_cmd="${3:-$2 --version}"
 
-    if command -v "$cmd" >/dev/null 2>&1; then
-
-        local version
-
-        version="$(
-            bash -c "$version_cmd" 2>/dev/null \
-            | head -n1
-        )"
-
-        ok "$label (${version})"
-
-    else
-
+    if ! command -v "$cmd" >/dev/null 2>&1; then
         warnc "$label not installed"
+        return
+    fi
 
+    local version stderr_out rc=0
+    run_version_cmd "$version_cmd" version stderr_out || rc=$?
+
+    if [[ $rc -eq 0 && -n "$version" ]]; then
+        ok "$label (${version})"
+    else
+        warnc "$label — '$version_cmd' failed (exit ${rc})${stderr_out:+: ${stderr_out}}"
     fi
 }
 
@@ -186,10 +212,15 @@ check_required "Poetry" poetry
 
 if command -v poetry >/dev/null; then
 
-    if [[ "$(poetry config virtualenvs.in-project)" == "true" ]]; then
+    poetry_setting=""
+    set +e
+    poetry_setting="$(poetry config virtualenvs.in-project 2>/dev/null)"
+    set -e
+
+    if [[ "$poetry_setting" == "true" ]]; then
         ok "Poetry configured for in-project virtualenvs"
     else
-        warnc "Poetry virtualenvs.in-project=false"
+        warnc "Poetry virtualenvs.in-project=${poetry_setting:-unknown}"
     fi
 
 fi
