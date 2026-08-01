@@ -75,7 +75,7 @@ exclude_docs: |
 # Site Information
 # ------------------------------------------------------------------------------
 
-site_name: BAOBAB Development Container
+site_name: BAOBAB Development
 
 site_description: >
   Enterprise-grade, reproducible development environment for the
@@ -83,11 +83,11 @@ site_description: >
 
 site_author: Nabhold
 
-site_url: https://nabhold.github.io/baobab-devcontainer/
+site_url: https://nabhold.github.io/baobab-dev/
 
-repo_name: nabhold/baobab-devcontainer
+repo_name: nabhold/baobab-dev
 
-repo_url: https://github.com/nabhold/baobab-devcontainer
+repo_url: https://github.com/nabhold/baobab-dev
 
 edit_uri: edit/main/docs/
 
