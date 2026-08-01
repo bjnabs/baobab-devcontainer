@@ -986,14 +986,13 @@ Browse Appendix
 </div>
 
 </section>
-
 <!-- ==========================================================================
      PROJECT STATUS
 ============================================================================ -->
 
 ## Built for the Open Source Community
 
-BAOBAB is developed in the open using modern engineering practices that emphasize transparency, reproducibility, and long-term maintainability. Every release is versioned, documented, and automated to provide a dependable foundation for individuals, teams, and enterprise environments.
+BAOBAB is developed in the open using modern engineering practices that emphasize transparency, reproducibility, and long-term maintainability. Every release is versioned, documented, and automated to provide a dependable foundation for individuals, teams, and enterprise software teams.
 
 <section class="status-grid">
 
@@ -1001,9 +1000,9 @@ BAOBAB is developed in the open using modern engineering practices that emphasiz
 
 :material-license:
 
-### Open Source
+### Apache 2.0
 
-Released under the Apache License 2.0, encouraging collaboration and commercial adoption.
+Permissive open-source licensing for individuals, businesses, and enterprise adoption.
 
 </div>
 
@@ -1011,21 +1010,21 @@ Released under the Apache License 2.0, encouraging collaboration and commercial 
 
 :material-tag:
 
-### Current Release
+### Release Candidate
 
 **v1.0.0-rc1**
 
-Enterprise-ready release candidate with a stable feature set.
+Feature complete and ready for broader community evaluation.
 
 </div>
 
 <div class="status-card">
 
-:material-source-branch:
+:material-github:
 
 ### GitHub Native
 
-Source code, documentation, CI/CD, releases, and container publishing managed from GitHub.
+Source code, documentation, releases, containers, and CI/CD managed entirely through GitHub.
 
 </div>
 
@@ -1035,7 +1034,7 @@ Source code, documentation, CI/CD, releases, and container publishing managed fr
 
 ### Secure Supply Chain
 
-Container images are automatically built, published, and signed using Cosign with GitHub OIDC.
+OCI container images are automatically published and signed using Cosign with GitHub OIDC.
 
 </div>
 
@@ -1048,6 +1047,112 @@ Container images are automatically built, published, and signed using Cosign wit
 <section class="cta-banner">
 
 ## Ready to Build with BAOBAB?
+
+Start developing in a deterministic, enterprise-grade environment that works consistently across local machines, Dev Containers, GitHub Codespaces, and automated CI/CD pipelines.
+
+<div class="hero-actions">
+
+<a
+    href="usage/"
+    class="md-button md-button--primary">
+
+Get Started
+
+</a>
+
+<a
+    href="https://github.com/nabhold/baobab-dev"
+    class="md-button">
+
+View on GitHub
+
+</a>
+
+</div>
+
+</section>
+
+<!-- ==========================================================================
+     DOCUMENTATION DIRECTORY
+============================================================================ -->
+
+## Explore the Documentation
+
+Everything you need—from your first development environment to the underlying architecture—is organized into six comprehensive documentation sections.
+
+<section class="footer-grid">
+
+<div class="footer-column">
+
+### :material-book-open-page-variant: Introduction
+
+- [Overview](introduction/overview.md)
+- [Key Features](introduction/key-features.md)
+- [Supported Platforms](introduction/supported-platforms.md)
+- [Included Components](introduction/included.md)
+- [Excluded Components](introduction/excluded.md)
+
+</div>
+
+<div class="footer-column">
+
+### :material-sitemap: Architecture
+
+- [Design Principles](architecture/design-principles.md)
+- [Repository Structure](architecture/repository-structure.md)
+- [Version Management](architecture/version-management.md)
+- [Toolchain](architecture/toolchain.md)
+- [Build Process](architecture/build-process.md)
+
+</div>
+
+<div class="footer-column">
+
+### :material-play-circle: Usage
+
+- [GitHub Codespaces](usage/github-codespaces.md)
+- [VS Code Dev Containers](usage/vscode-devcontainers.md)
+- [Running Locally](usage/running-locally.md)
+
+</div>
+
+<div class="footer-column">
+
+### :material-file-document-outline: Reference
+
+- [Build Arguments](reference/build-arguments.md)
+- [Environment Variables](reference/environment-variables.md)
+- [Helper Commands](reference/helper-commands.md)
+- [Health Checks](reference/health-checks.md)
+- [Build Verification](reference/build-verification.md)
+
+</div>
+
+<div class="footer-column">
+
+### :material-folder-account: Project
+
+- [Authors](project/authors.md)
+- [Contributing](project/contributing.md)
+- [Roadmap](project/roadmap.md)
+- [Security](project/security.md)
+- [License](project/license.md)
+
+</div>
+
+<div class="footer-column">
+
+### :material-help-circle-outline: Appendix
+
+- [FAQ](appendix/faq.md)
+- [Glossary](appendix/glossary.md)
+- [Common Commands](appendix/common-commands.md)
+- [Support](appendix/support.md)
+- [External References](appendix/external-references.md)
+
+</div>
+
+</section>
 
 Build modern applications in a deterministic development environment that works consistently across local machines, Dev Containers, GitHub Codespaces, and automated CI/CD pipelines.
 
