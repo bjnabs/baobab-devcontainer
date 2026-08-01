@@ -138,23 +138,31 @@ dev = [
 ]
 
 docs = [
-
-    # --------------------------------------------------------------------------
-    # Static Site Generator
-    # --------------------------------------------------------------------------
-
     # Core Documentation Engine
     "mkdocs>=1.6,<2.0",
+    "mkdocs-material>=9.5,<10.0",
 
-    # --------------------------------------------------------------------------
-    # Material Theme
-    # --------------------------------------------------------------------------
+    # Templating & Macros
+    "mkdocs-macros-plugin>=1.3,<2.0",
+    "mkdocs-include-markdown-plugin>=7.0,<8.0",
 
-    "mkdocs-material>=9.6,<10.0",
+    # Visual Enhancements & Lightbox
+    "mkdocs-glightbox>=0.4,<1.0",
 
-    # --------------------------------------------------------------------------
-    # Markdown Enhancements
-    # --------------------------------------------------------------------------
+    # Navigation Control
+    "mkdocs-awesome-pages-plugin>=2.9,<3.0",
+
+    # Publication & Feeds
+    "mkdocs-rss-plugin>=1.6,<2.0",
+
+    # Git Revision Date
+    "mkdocs-git-revision-date-localized-plugin>=1.4,<2.0",
+
+    # Redirect Support
+    "mkdocs-redirects>=1.2,<2.0",
+
+    # HTML Minification
+    "mkdocs-minify-plugin>=0.8,<1.0",
 
     "pymdown-extensions>=11.0,<12.0",
 
@@ -169,24 +177,7 @@ docs = [
     # to dark mode, which this site's palette toggle relies on.
     # --------------------------------------------------------------------------
 
-    # --------------------------------------------------------------------------
-    # Automatic "Last Updated" Information
-    # --------------------------------------------------------------------------
-
-    "mkdocs-git-revision-date-localized-plugin>=1.4,<2.0",
-
-    # --------------------------------------------------------------------------
-    # Redirect Support
-    # ----------------------------------------------------
-
-    "mkdocs-redirects>=1.2,<2.0",
-
-    # --------------------------------------------------------------------------
-    # HTML Minification
-    # --------------------------------------------------------------------------
-
-    "mkdocs-minify-plugin>=0.8,<1.0",
-]
+] 
 
 # ------------------------------------------------------------------------------
 # Future Dependency Groups
