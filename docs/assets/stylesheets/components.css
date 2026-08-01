@@ -1,0 +1,175 @@
+/*==============================================================================
+  BAOBAB ENTERPRISE PLATFORM
+  Components
+
+  File:
+      docs/assets/stylesheets/components.css
+==============================================================================*/
+
+/*==============================================================================
+  Buttons
+==============================================================================*/
+
+.md-typeset .md-button {
+    border-radius: var(--baobab-radius-small);
+    font-weight: var(--baobab-weight-medium);
+    padding: 0.625em 1.5em;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.md-typeset .md-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--baobab-shadow-small);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .md-button:hover {
+    box-shadow: var(--baobab-shadow-small-dark);
+}
+
+.md-typeset .md-button--primary {
+    background-color: var(--baobab-green);
+    border-color: var(--baobab-green);
+    color: #FFFFFF;
+}
+
+.md-typeset .md-button--primary:hover {
+    background-color: var(--baobab-green-dark);
+    border-color: var(--baobab-green-dark);
+}
+
+/* FIX: Primary Button Dark Mode Parity */
+[data-md-color-scheme="slate"] .md-typeset .md-button--primary {
+    background-color: var(--baobab-green-light);
+    border-color: var(--baobab-green-light);
+    color: var(--baobab-background-dark);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .md-button--primary:hover {
+    background-color: var(--baobab-green);
+    border-color: var(--baobab-green);
+}
+
+/*==============================================================================
+  Card Grid Items
+==============================================================================*/
+
+.md-typeset .grid.cards>ul>li,
+.md-typeset .grid.cards>ol>li {
+    background-color: var(--baobab-surface);
+    border: 1px solid var(--baobab-border);
+    border-radius: var(--baobab-radius);
+    box-shadow: var(--baobab-shadow-small);
+    padding: var(--baobab-space-5);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.md-typeset .grid.cards>ul>li:hover,
+.md-typeset .grid.cards>ol>li:hover {
+    box-shadow: var(--baobab-shadow-large);
+    transform: translateY(-2px);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards>ul>li,
+[data-md-color-scheme="slate"] .md-typeset .grid.cards>ol>li {
+    background-color: var(--baobab-surface-dark);
+    border-color: var(--baobab-border-dark);
+    box-shadow: var(--baobab-shadow-small-dark);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards>ul>li:hover,
+[data-md-color-scheme="slate"] .md-typeset .grid.cards>ol>li:hover {
+    box-shadow: var(--baobab-shadow-large-dark);
+}
+
+.md-typeset .grid.cards>ul>li> :first-child,
+.md-typeset .grid.cards>ol>li> :first-child {
+    color: var(--baobab-green);
+    font-size: 2rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards>ul>li> :first-child,
+[data-md-color-scheme="slate"] .md-typeset .grid.cards>ol>li> :first-child {
+    color: var(--baobab-green-light);
+}
+
+/*==============================================================================
+  Scroll-To-Top Button
+==============================================================================*/
+
+.scroll-top {
+    position: fixed;
+    right: var(--baobab-space-4);
+    bottom: var(--baobab-space-4);
+    z-index: 50;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--baobab-primary);
+    color: #FFFFFF;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: var(--baobab-shadow-large);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+}
+
+.scroll-top:hover {
+    background-color: var(--baobab-primary-light);
+}
+
+.scroll-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/*==============================================================================
+  Clipboard Copy Feedback
+==============================================================================*/
+
+.md-clipboard.copied::after {
+    content: "Copied";
+    position: absolute;
+    right: 0;
+    top: -1.75em;
+    font-size: var(--baobab-text-xs);
+    font-weight: var(--baobab-weight-medium);
+    color: #FFFFFF;
+    background-color: var(--baobab-primary);
+    border-radius: var(--baobab-radius-small);
+    padding: 0.2em 0.6em;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* FIX: Floating Component Dark Mode Parity */
+[data-md-color-scheme="slate"] .scroll-top,
+[data-md-color-scheme="slate"] .md-clipboard.copied::after {
+    background-color: var(--baobab-primary-light);
+}
+
+/*==============================================================================
+  Focus Visibility
+==============================================================================*/
+
+.md-typeset a:focus-visible,
+.md-typeset .md-button:focus-visible,
+.scroll-top:focus-visible {
+    outline: 2px solid var(--baobab-focus-ring);
+    outline-offset: var(--baobab-focus-ring-offset);
+    border-radius: var(--baobab-radius-small);
+}
+
+/*==============================================================================
+  External Link Indicator
+==============================================================================*/
+
+.md-typeset a[target="_blank"]:not(.md-button)::after {
+    content: "↗";
+    display: inline-block;
+    margin-left: 0.2em;
+    font-size: 0.85em;
+}

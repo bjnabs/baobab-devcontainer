@@ -1,0 +1,57 @@
+/*==============================================================================
+  BAOBAB ENTERPRISE PLATFORM
+  Dark Theme — Material for MkDocs Bridge
+
+  File:
+      docs/assets/css/dark.css
+
+  Purpose:
+      Wires Baobab's dark-mode tokens (defined in palette.css) into
+      Material for MkDocs' CSS variable system for the "slate" scheme.
+
+  Activation:
+      Requires mkdocs.yml's dark palette entry to declare:
+          scheme: slate
+          primary: custom
+          accent: custom
+      (see the accompanying mkdocs.yml note — without `custom`, Material
+      falls back to its own stock slate swatch and these tokens are
+      never consulted.)
+
+  Depends on:
+      palette.css (must load first — see extra.css import order)
+==============================================================================*/
+
+[data-md-color-scheme="slate"] {
+
+    --md-primary-fg-color: var(--baobab-background-dark);
+    --md-primary-fg-color--light: var(--baobab-surface-dark);
+    --md-primary-fg-color--dark: var(--baobab-background-dark);
+    --md-primary-bg-color: var(--baobab-text-dark);
+    --md-primary-bg-color--light: var(--baobab-text-dark-light);
+
+    --md-accent-fg-color: var(--baobab-green-light);
+    --md-accent-fg-color--transparent: rgba(127, 176, 110, 0.15);
+    --md-accent-bg-color: var(--baobab-background-dark);
+
+    --md-default-fg-color: var(--baobab-text-dark);
+    --md-default-fg-color--light: var(--baobab-text-dark-light);
+    --md-default-bg-color: var(--baobab-background-dark);
+
+    --md-typeset-a-color: var(--baobab-green-light);
+
+    --md-footer-bg-color: var(--baobab-surface-dark);
+    --md-footer-fg-color: var(--baobab-text-dark);
+
+    /* Card / admonition surfaces read the primary surface tokens above;
+       component-level overrides (borders, shadows) live in components.css
+       and should reference --baobab-border-dark / --baobab-shadow-*-dark
+       rather than hard-coded hex, so a future brand refresh only touches
+       palette.css. */
+
+}
+
+
+/*==============================================================================
+  End of File
+==============================================================================*/

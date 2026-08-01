@@ -1,283 +1,79 @@
- ```css
-/* =============================================================================
- * BAOBAB Development Container
- * =============================================================================
- *
- * File
- * ----
- * extra.css
- *
- * Purpose
- * -------
- * Provides BAOBAB-specific visual enhancements for the MkDocs Material theme.
- *
- * The objective is not to replace the Material theme, but to complement it with
- * consistent branding, improved readability, reusable utility classes, and
- * minor presentation enhancements.
- *
- * Design Principles
- * -----------------
- * • Keep overrides minimal.
- * • Prefer CSS custom properties over hard-coded values.
- * • Support both light and dark themes.
- * • Preserve Material defaults whenever practical.
- * • Organize styles into logical sections.
- *
- * =============================================================================
- */
+/*==============================================================================
+  BAOBAB ENTERPRISE PLATFORM
+  Material for MkDocs Theme
 
-/* =============================================================================
-   1. Brand Variables
-   ========================================================================== */
+  File:
+      docs/assets/stylesheets/extra.css
 
-:root {
+  Purpose:
+      Entry point for the Baobab Documentation Design System.
 
-    /* -------------------------------------------------------------------------
-       Brand Colors
-       ---------------------------------------------------------------------- */
+      This file intentionally contains little or no styling.
+      Instead, it imports the modular CSS architecture that defines
+      the Baobab visual identity.
 
-    --baobab-primary: #2e7d32;
-    --baobab-secondary: #388e3c;
-    --baobab-accent: #66bb6a;
+  Architecture:
 
-    /* -------------------------------------------------------------------------
-       Layout
-       ---------------------------------------------------------------------- */
+      palette.css        → Design tokens
+      typography.css     → Fonts and text styles
+      layout.css         → Page layout and grids
+      components.css     → Reusable UI components
+      utilities.css      → Utility helper classes
+      dark.css           → Dark mode overrides
+      animations.css     → Animations and transitions
 
-    --baobab-content-width: 80rem;
+  Author:
+      Nabhold Group Africa
 
-    /* -------------------------------------------------------------------------
-       Borders
-       ---------------------------------------------------------------------- */
+  Project:
+      Baobab Enterprise Platform
+==============================================================================*/
 
-    --baobab-border-radius: 0.5rem;
 
-    /* -------------------------------------------------------------------------
-       Code Blocks
-       ---------------------------------------------------------------------- */
+/*==============================================================================
+  Design Tokens
+==============================================================================*/
 
-    --baobab-code-radius: 0.4rem;
+@import url("palette.css");
 
-    /* -------------------------------------------------------------------------
-       Tables
-       ---------------------------------------------------------------------- */
 
-    --baobab-table-radius: 0.5rem;
+/*==============================================================================
+  Typography
+==============================================================================*/
+@import url("typography-tokens.css");
+@import url("typography.css");
 
-}
 
-/* =============================================================================
-   2. Dark Theme Adjustments
-   ========================================================================== */
+/*==============================================================================
+  Layout
+==============================================================================*/
 
-[data-md-color-scheme="slate"] {
+@import url("layout.css");
 
-    --baobab-primary: #66bb6a;
-    --baobab-secondary: #81c784;
 
-}
+/*==============================================================================
+  Components
+==============================================================================*/
 
-/* =============================================================================
-   3. Global Typography
-   ========================================================================== */
+@import url("components.css");
 
-.md-typeset {
 
-    line-height: 1.75;
+/*==============================================================================
+  Utilities
+==============================================================================*/
 
-}
+@import url("utilities.css");
 
-.md-typeset h1 {
 
-    font-weight: 700;
+/*==============================================================================
+  Dark Theme
+==============================================================================*/
 
-}
+@import url("dark.css");
 
-.md-typeset h2,
-.md-typeset h3,
-.md-typeset h4 {
 
-    scroll-margin-top: 5rem;
+/*==============================================================================
+  Animations
+==============================================================================*/
 
-}
-
-/* =============================================================================
-   4. Links
-   ========================================================================== */
-
-.md-typeset a {
-
-    text-decoration-thickness: 0.08em;
-
-}
-
-.md-typeset a:hover {
-
-    text-decoration: underline;
-
-}
-
-/* =============================================================================
-   5. Content Width
-   ========================================================================== */
-
-.md-grid {
-
-    max-width: var(--baobab-content-width);
-
-}
-
-/* =============================================================================
-   6. Code Blocks
-   ========================================================================== */
-
-.highlight pre {
-
-    border-radius: var(--baobab-code-radius);
-
-}
-
-.md-typeset code {
-
-    border-radius: 0.25rem;
-
-}
-
-/* =============================================================================
-   7. Tables
-   ========================================================================== */
-
-.md-typeset table:not([class]) {
-
-    border-radius: var(--baobab-table-radius);
-
-    overflow: hidden;
-
-}
-
-/* =============================================================================
-   8. Admonitions
-   ========================================================================== */
-
-.md-typeset .admonition,
-.md-typeset details {
-
-    border-radius: var(--baobab-border-radius);
-
-}
-
-/* =============================================================================
-   9. Images
-   ========================================================================== */
-
-.md-typeset img {
-
-    border-radius: var(--baobab-border-radius);
-
-}
-
-/* =============================================================================
-   10. Mermaid Diagrams
-   ========================================================================== */
-
-.mermaid {
-
-    text-align: center;
-
-}
-
-/* =============================================================================
-   11. Navigation
-   ========================================================================== */
-
-.md-nav__title {
-
-    font-weight: 600;
-
-}
-
-/* =============================================================================
-   12. Footer
-   ========================================================================== */
-
-.md-footer {
-
-    font-size: 0.85rem;
-
-}
-
-/* =============================================================================
-   13. Utility Classes
-   ========================================================================== */
-
-/*
- * Center content
- */
-
-.baobab-center {
-
-    text-align: center;
-
-}
-
-/*
- * Right-align content
- */
-
-.baobab-right {
-
-    text-align: right;
-
-}
-
-/*
- * Highlight important information.
- */
-
-.baobab-highlight {
-
-    border-left: 0.25rem solid var(--baobab-primary);
-
-    padding-left: 1rem;
-
-}
-
-/* =============================================================================
-   14. Responsive Design
-   ========================================================================== */
-
-@media screen and (max-width: 76.25em) {
-
-    .md-grid {
-
-        max-width: 100%;
-
-    }
-
-}
-
-/* =============================================================================
-   15. Print Styles
-   ========================================================================== */
-
-@media print {
-
-    .md-header,
-    .md-tabs,
-    .md-sidebar,
-    .md-footer {
-
-        display: none;
-
-    }
-
-    .md-content {
-
-        margin: 0;
-
-        padding: 0;
-
-    }
-
-}
-```
+@import url("animations.css");
