@@ -1,3 +1,17 @@
+---
+title: BAOBAB — Enterprise Development Infrastructure
+description: >-
+  Deterministic, enterprise-grade development container for the BAOBAB
+  Enterprise Platform. Identical environments across local machines, Dev
+  Containers, GitHub Codespaces, and CI/CD.
+template: home.html
+hide:
+  - navigation
+  - toc
+  - footer
+  - feedback
+---
+
 <!-- ==========================================================================
      HERO
 ========================================================================== -->

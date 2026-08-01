@@ -1,0 +1,40 @@
+{#
+  overrides/home.html
+
+  Selected per-page via docs/index.md's front matter:
+
+      template: home.html
+
+  Extends Material's own main.html (NOT base.html directly) so every other
+  theme feature — header, search, palette toggle, back-to-top, footer,
+  keyboard shortcuts, instant navigation — is inherited unmodified. Only the
+  two blocks below are touched, deliberately kept to the minimum needed to
+  make the landing page read as a distinct product page rather than a
+  documentation article:
+
+    tabs      Suppresses the horizontal navigation.tabs bar (theme.features
+              in mkdocs.yml) on this page only. Every other page keeps it.
+              There is no front-matter `hide:` option for this — themeing
+              it out requires a template override.
+
+    content   Renders {{ page.content }} directly instead of the default
+              partials/content.html, which also injects the "Was this page
+              helpful?" feedback widget and the edit-this-page pencil icon.
+              Neither belongs on a landing page. (The feedback widget is
+              also suppressed via `hide: - feedback` in the front matter,
+              belt-and-braces; the edit action has no separate hide option,
+              so it is dropped here structurally instead.)
+
+  Everything else — sidebars, breadcrumbs, footer copyright/social — is
+  governed by docs/index.md's `hide:` front matter and mkdocs.yml, not by
+  this file. Keep it that way: the smaller this file stays, the less of it
+  can drift out of sync with future Material upgrades.
+#}
+{% extends "main.html" %}
+
+{% block tabs %}
+{% endblock %}
+
+{% block content %}
+  {{ page.content }}
+{% endblock %}
