@@ -2,7 +2,7 @@
      HERO
 ========================================================================== -->
 
-<section class="hero">
+<section class="landing-hero">
 
 <div class="hero-content">
 
@@ -19,9 +19,9 @@ Build faster with a deterministic, enterprise-grade development platform that de
 </a>
 
 <a
-    href="https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=YOUR_REPOSITORY_ID"
+    href="https://github.com/nabhold/baobab-dev"
     class="md-button">
-    Launch in Codespaces
+    View on GitHub
 </a>
 
 </div>
@@ -286,218 +286,6 @@ Start coding in minutes with a complete development environment that works consi
 </div>
 
 </section>
-
-
-<!-- ==========================================================================
-     INTERACTIVE SHOWCASE
-========================================================================== -->
-
-## Explore BAOBAB in Action
-
-Every component of BAOBAB is designed to provide a predictable, enterprise-grade development experience. Explore how environments are built, verified, and continuously delivered.
-
----
-
-=== ":material-sitemap: Environment Architecture"
-
-<div class="showcase">
-
-<div class="showcase-content">
-
-### One Platform. Every Environment.
-
-BAOBAB delivers the same deterministic development experience across local workstations, VS Code Dev Containers, GitHub Codespaces, and GitHub Actions.
-
-Every image is generated from a single version manifest, ensuring consistency from development through production.
-
-<ul class="feature-list">
-<li>Single source of truth</li>
-<li>Deterministic builds</li>
-<li>Multi-architecture images</li>
-<li>Identical developer experience</li>
-</ul>
-
-</div>
-
-<div class="showcase-code">
-
-```mermaid
-flowchart TD
-
-    A["versions.yaml"]
-
-    B["resolve.sh"]
-
-    C["versions.lock"]
-
-    D["Docker Build"]
-
-    E["AMD64 Image"]
-
-    F["ARM64 Image"]
-
-    G["OCI Manifest"]
-
-    H["GitHub Container Registry"]
-
-    I["Dev Containers"]
-
-    J["GitHub Codespaces"]
-
-    K["CI/CD"]
-
-    A --> B
-    B --> C
-    C --> D
-
-    D --> E
-    D --> F
-
-    E --> G
-    F --> G
-
-    G --> H
-
-    H --> I
-    H --> J
-    H --> K
-```
-
-</div>
-
-</div>
-
----
-
-=== ":material-stethoscope: Verification & Health Checks"
-
-<div class="showcase">
-
-<div class="showcase-content">
-
-### Trust Every Environment
-
-Before development begins, BAOBAB verifies that every required component is installed, correctly configured, and operating as expected.
-
-Health verification provides immediate confidence that every developer and every CI runner starts from the same known-good environment.
-
-<ul class="feature-list">
-<li>Environment validation</li>
-<li>Toolchain verification</li>
-<li>Version consistency</li>
-<li>Instant diagnostics</li>
-</ul>
-
-</div>
-
-<div class="showcase-code">
-
-```console
-$ ./scripts/verify.sh
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-BAOBAB Development Platform Verification
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✓ Ubuntu 26.04 LTS
-
-✓ Python 3.14
-
-✓ uv Package Manager
-
-✓ Flutter SDK
-
-✓ Node.js LTS
-
-✓ Docker CLI
-
-✓ GitHub CLI
-
-✓ PostgreSQL Client
-
-✓ Git configured
-
-✓ Workspace healthy
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Environment verified.
-
-Ready for development.
-```
-
-</div>
-
-</div>
-
----
-
-=== ":material-github: CI/CD & Automated Delivery"
-
-<div class="showcase">
-
-<div class="showcase-content">
-
-### From Commit to Production
-
-Every release is automatically built, validated, published, signed, and documented through GitHub Actions.
-
-The entire pipeline is reproducible, secure, and optimized for both AMD64 and ARM64 architectures.
-
-<ul class="feature-list">
-<li>GitHub Actions automation</li>
-<li>Multi-architecture builds</li>
-<li>Cosign OIDC signing</li>
-<li>GitHub Pages deployment</li>
-</ul>
-
-</div>
-
-<div class="showcase-code">
-
-```mermaid
-flowchart LR
-
-    A["Push"]
-
-    B["Resolve Versions"]
-
-    C["Build AMD64"]
-
-    D["Build ARM64"]
-
-    E["Publish OCI Image"]
-
-    F["Create Manifest"]
-
-    G["Cosign Sign"]
-
-    H["Deploy Documentation"]
-
-    I["GitHub Releases"]
-
-    A --> B
-
-    B --> C
-    B --> D
-
-    C --> E
-    D --> E
-
-    E --> F
-
-    F --> G
-
-    G --> H
-
-    G --> I
-```
-
-</div>
-
-</div>
 
 
 <!-- ==========================================================================
@@ -986,6 +774,7 @@ Browse Appendix
 </div>
 
 </section>
+
 <!-- ==========================================================================
      PROJECT STATUS
 ============================================================================ -->
@@ -1000,9 +789,13 @@ BAOBAB is developed in the open using modern engineering practices that emphasiz
 
 :material-license:
 
+<div>
+
 ### Apache 2.0
 
 Permissive open-source licensing for individuals, businesses, and enterprise adoption.
+
+</div>
 
 </div>
 
@@ -1010,11 +803,13 @@ Permissive open-source licensing for individuals, businesses, and enterprise ado
 
 :material-tag:
 
+<div>
+
 ### Release Candidate
 
-**v1.0.0-rc1**
+**v1.0.0-rc1** — feature complete and ready for broader community evaluation.
 
-Feature complete and ready for broader community evaluation.
+</div>
 
 </div>
 
@@ -1022,9 +817,13 @@ Feature complete and ready for broader community evaluation.
 
 :material-github:
 
+<div>
+
 ### GitHub Native
 
 Source code, documentation, releases, containers, and CI/CD managed entirely through GitHub.
+
+</div>
 
 </div>
 
@@ -1032,9 +831,13 @@ Source code, documentation, releases, containers, and CI/CD managed entirely thr
 
 :material-shield-check:
 
+<div>
+
 ### Secure Supply Chain
 
 OCI container images are automatically published and signed using Cosign with GitHub OIDC.
+
+</div>
 
 </div>
 
@@ -1151,91 +954,5 @@ Everything you need—from your first development environment to the underlying 
 - [External References](appendix/external-references.md)
 
 </div>
-
-</section>
-
-Build modern applications in a deterministic development environment that works consistently across local machines, Dev Containers, GitHub Codespaces, and automated CI/CD pipelines.
-
-<div class="hero-actions">
-
-<a
-    href="usage/"
-    class="md-button md-button--primary">
-
-Get Started
-
-</a>
-
-<a
-    href="https://github.com/nabhold/baobab-dev"
-    class="md-button">
-
-View Source
-
-</a>
-
-</div>
-
-</section>
-
-<!-- ==========================================================================
-     FOOTER NAVIGATION
-============================================================================ -->
-
-<section class="landing-footer">
-
-### Explore BAOBAB
-
-<div class="footer-grid">
-
-<div>
-
-#### Introduction
-
-- [Overview](introduction/overview.md)
-- [Key Features](introduction/key-features.md)
-- [Supported Platforms](introduction/supported-platforms.md)
-- [Included Components](introduction/included.md)
-- [Excluded Components](introduction/excluded.md)
-
-</div>
-
-<div>
-
-#### Architecture
-
-- [Design Principles](architecture/design-principles.md)
-- [Repository Structure](architecture/repository-structure.md)
-- [Version Management](architecture/version-management.md)
-- [Toolchain](architecture/toolchain.md)
-- [Build Process](architecture/build-process.md)
-
-</div>
-
-<div>
-
-#### Usage
-
-- [GitHub Codespaces](usage/github-codespaces.md)
-- [VS Code Dev Containers](usage/vscode-devcontainers.md)
-- [Running Locally](usage/running-locally.md)
-
-</div>
-
-<div>
-
-#### Project
-
-- [Roadmap](project/roadmap.md)
-- [Contributing](project/contributing.md)
-- [Security](project/security.md)
-- [License](project/license.md)
-- [Authors](project/authors.md)
-
-</div>
-
-</div>
-
- 
 
 </section>
