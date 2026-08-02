@@ -40,7 +40,10 @@
 #
 # `template: home.html` is resolved against overrides/home.html (see
 # theme.custom_dir below), which extends Material's own main.html and
-# overrides only the `tabs` and `content` blocks — every other page keeps
+# overrides only the `tabs` block (suppresses the horizontal nav-tabs bar
+# on this page) — the default `content` block is deliberately left alone,
+# since it's what applies Material's `md-typeset` class that every rule in
+# typography.css/components.css depends on. Every other page keeps
 # Material's standard documentation chrome (left nav, right TOC, tab bar,
 # breadcrumbs, feedback widget) untouched. See overrides/home.html for the
 # full rationale.
@@ -118,7 +121,7 @@ site_description: >
   Enterprise-grade, reproducible development environment for the
   BAOBAB Enterprise Platform.
 
-site_author: Nabhold Group Africa
+site_author: Nabhold
 
 site_url: https://nabhold.github.io/baobab-dev/
 
@@ -131,7 +134,7 @@ edit_uri: edit/main/docs/
 # `{year}` is resolved at build time by hooks/copyright.py — do not
 # hand-edit the year here.
 copyright: >-
-  Copyright &copy; {year} Nabhold Group Africa.
+  Copyright &copy; {year} Nabhold.
   Licensed under the Apache License 2.0.
 
 # ------------------------------------------------------------------------------
@@ -283,6 +286,8 @@ plugins:
 
   - minify:
       minify_html: true
+      minify_css: true
+      minify_js: true
 
   # Social preview cards (Open Graph / Twitter Card images), auto-generated
   # per page from its title/description at build time.

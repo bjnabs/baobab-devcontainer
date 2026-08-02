@@ -7,23 +7,40 @@
 
   Extends Material's own main.html (NOT base.html directly) so every other
   theme feature — header, search, palette toggle, back-to-top, footer,
-  keyboard shortcuts, instant navigation — is inherited unmodified. Only the
-  two blocks below are touched, deliberately kept to the minimum needed to
-  make the landing page read as a distinct product page rather than a
-  documentation article:
+  keyboard shortcuts, instant navigation — is inherited unmodified.
 
-    tabs      Suppresses the horizontal navigation.tabs bar (theme.features
-              in mkdocs.yml) on this page only. Every other page keeps it.
-              There is no front-matter `hide:` option for this — themeing
-              it out requires a template override.
+  Only ONE block is touched:
 
-    content   Renders {{ page.content }} directly instead of the default
-              partials/content.html, which also injects the "Was this page
-              helpful?" feedback widget and the edit-this-page pencil icon.
-              Neither belongs on a landing page. (The feedback widget is
-              also suppressed via `hide: - feedback` in the front matter,
-              belt-and-braces; the edit action has no separate hide option,
-              so it is dropped here structurally instead.)
+    tabs   Suppresses the horizontal navigation.tabs bar (theme.features
+           in mkdocs.yml) on this page only. Every other page keeps it.
+           There is no front-matter `hide:` option for this — removing it
+           requires a template override.
+
+  IMPORTANT — do not override the `content` block here.
+  An earlier version of this file did:
+
+      {% block content %}
+        {{ page.content }}
+      {% endblock %}
+
+  This looked harmless but broke the page: Material's default `content`
+  block doesn't just insert page.content — it's what applies the
+  `md-typeset` class in the first place (see partials/content.html /
+  blog.html's container block for the equivalent pattern). Every rule in
+  typography.css and components.css is scoped `.md-typeset ...`, so
+  bypassing that partial silently dropped ALL of that styling on this page
+  only. It's also the likely cause of same-page navigation.instant links
+  failing, since Material's client-side instant-navigation JS expects the
+  standard content DOM structure to swap against.
+
+  The feedback widget that motivated the original override is already
+  suppressed the supported way, via `hide: - feedback` in docs/index.md's
+  front matter — no template code needed for that. The edit-this-page
+  pencil icon has no equivalent front-matter switch; it is left visible
+  here as an accepted minor cosmetic trade-off rather than risk this class
+  of bug again. If it needs hiding later, do it in CSS
+  (`body:has(.landing-hero) .md-content__button { display: none; }`) —
+  not in this template.
 
   Everything else — sidebars, breadcrumbs, footer copyright/social — is
   governed by docs/index.md's `hide:` front matter and mkdocs.yml, not by
@@ -33,8 +50,4 @@
 {% extends "main.html" %}
 
 {% block tabs %}
-{% endblock %}
-
-{% block content %}
-  {{ page.content }}
 {% endblock %}
