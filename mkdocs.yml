@@ -198,19 +198,21 @@ theme:
 
     # Light Mode — applied when the OS reports a light preference, or as
     # the fallback when no preference is reported at all.
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
     - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: green
-      accent: green
+      scheme: default 
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
 
     # Dark Mode — applied when the OS reports a dark preference.
     - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: green
-      accent: green
+      scheme: slate 
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
@@ -221,49 +223,68 @@ theme:
 
 markdown_extensions:
 
+  - abbr
   - admonition
-
   - attr_list
-
+  
+  - def_list
+  - footnotes
   - md_in_html
 
   - tables
 
-  - footnotes
-
   - toc:
       permalink: true
-
+      permalink_title: Anchor link to this section for reference
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+      title: On this page
+      toc_depth: 3
+  
+  - pymdownx.betterem
+  - pymdownx.blocks.caption
+  - pymdownx.caret
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !python/name:material.extensions.emoji.to_svg
 
+
+  
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      use_pygments: true
+      linenums_style: pymdownx-inline
+      auto_title: true
+      pygments_lang_class: true
+
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: "!!python/name:pymdownx.superfences.fence_code_format"
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
   - pymdownx.tabbed:
       alternate_style: true
-
-  - pymdownx.highlight:
-      anchor_linenums: true
-      line_spans: __span
-      pygments_lang_class: true
-
-  - pymdownx.inlinehilite
-
-  - pymdownx.snippets
-
-  - pymdownx.keys
-
-  - pymdownx.magiclink
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
 
   - pymdownx.tasklist:
       custom_checkbox: true
-
-  - pymdownx.emoji:
-      emoji_generator: "!!python/name:material.extensions.emoji.to_svg"
-
+  
+  - pymdownx.tilde
+  
 # ------------------------------------------------------------------------------
 # Plugins
 # ------------------------------------------------------------------------------
