@@ -1,7 +1,59 @@
-{#-
-  This file was automatically generated - do not edit
--#}
+{#
+  overrides/partials/footer.html
+
+  Site-wide override of Material's own partials/footer.html — applies to
+  EVERY page, not just the landing page. Resolved automatically via
+  theme.custom_dir (mkdocs.yml); no per-page template selection needed,
+  since base.html includes "partials/footer.html" directly on every page.
+
+  Structure, top to bottom:
+
+    1. Footer prev/next navigation  — UNCHANGED, copied verbatim from
+       Material's own footer.html (github.com/squidfunk/mkdocs-material,
+       material/templates/partials/footer.html). Still respects
+       theme.features -> navigation.footer and per-page
+       `hide: - footer` front matter exactly as before.
+
+    2. Documentation Directory       — NEW. A six-column sitemap grid,
+       reusing .footer-grid (extra.css) — the same CSS Grid
+       `auto-fit, minmax()` pattern used by every other multi-column
+       section on the landing page. This is the Material equivalent of a
+       Bootstrap `.row` of `.col-*`: Material ships no such utility
+       system, so every multi-column layout in this project is hand-rolled
+       CSS Grid under a semantic class name rather than a framework
+       utility class.
+
+       `.md-grid` here is Material's OWN width-constraining container
+       class (used identically for the nav above and the copyright bar
+       below) — the closest equivalent Material has to Bootstrap's
+       `.container`. It is NOT a column system; `.footer-grid` supplies
+       the columns.
+
+       Wrapped in `.md-typeset`, same as Material's own copyright block
+       just below it, for the same reason the hero partial is: outside
+       `.md-content`, nothing else supplies that class, and every rule in
+       typography.css/components.css depends on it.
+
+       Every href below uses MkDocs' own `url` filter against the FINAL
+       clean-URL path (e.g. "introduction/overview/", NOT the .md source
+       path) — confirmed against MkDocs' own url_filter implementation,
+       which normalizes a given URL relative to page/base_url context. A
+       hand-typed relative path (as the old markdown-only version used)
+       only worked because it lived exclusively on the root-level
+       homepage; here it must resolve correctly from every page at every
+       nesting depth, so it goes through the filter instead.
+
+    3. Footer meta (copyright / social) — UNCHANGED, copied verbatim.
+       hooks/copyright.py's {year} resolution and mkdocs.yml's
+       extra.social list continue to work exactly as before; nothing
+       about them was touched.
+
+  IMPORTANT: keep sections 1 and 3 byte-for-byte in sync with upstream if
+  mkdocs-material is ever upgraded and its footer.html changes — check
+  that file's diff first. Only section 2 is this project's own content.
+#}
 <footer class="md-footer">
+
   {% if "navigation.footer" in features %}
     {% if page.previous_page or page.next_page %}
       {% if page.meta and page.meta.hide %}
@@ -45,6 +97,97 @@
       </nav>
     {% endif %}
   {% endif %}
+
+  <div class="md-footer-directory md-typeset">
+    <div class="md-grid">
+      <div class="footer-grid">
+
+        <div class="footer-column">
+          <h3>
+            <span class="twemoji">{% include ".icons/material/book-open-page-variant.svg" %}</span>
+            Introduction
+          </h3>
+          <ul>
+            <li><a href="{{ 'introduction/overview/' | url }}">Overview</a></li>
+            <li><a href="{{ 'introduction/key-features/' | url }}">Key Features</a></li>
+            <li><a href="{{ 'introduction/supported-platforms/' | url }}">Supported Platforms</a></li>
+            <li><a href="{{ 'introduction/included/' | url }}">Included Components</a></li>
+            <li><a href="{{ 'introduction/excluded/' | url }}">Excluded Components</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-column">
+          <h3>
+            <span class="twemoji">{% include ".icons/material/sitemap.svg" %}</span>
+            Architecture
+          </h3>
+          <ul>
+            <li><a href="{{ 'architecture/design-principles/' | url }}">Design Principles</a></li>
+            <li><a href="{{ 'architecture/repository-structure/' | url }}">Repository Structure</a></li>
+            <li><a href="{{ 'architecture/version-management/' | url }}">Version Management</a></li>
+            <li><a href="{{ 'architecture/toolchain/' | url }}">Toolchain</a></li>
+            <li><a href="{{ 'architecture/build-process/' | url }}">Build Process</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-column">
+          <h3>
+            <span class="twemoji">{% include ".icons/material/play-circle.svg" %}</span>
+            Usage
+          </h3>
+          <ul>
+            <li><a href="{{ 'usage/github-codespaces/' | url }}">GitHub Codespaces</a></li>
+            <li><a href="{{ 'usage/vscode-devcontainers/' | url }}">VS Code Dev Containers</a></li>
+            <li><a href="{{ 'usage/running-locally/' | url }}">Running Locally</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-column">
+          <h3>
+            <span class="twemoji">{% include ".icons/material/file-document-outline.svg" %}</span>
+            Reference
+          </h3>
+          <ul>
+            <li><a href="{{ 'reference/build-arguments/' | url }}">Build Arguments</a></li>
+            <li><a href="{{ 'reference/environment-variables/' | url }}">Environment Variables</a></li>
+            <li><a href="{{ 'reference/helper-commands/' | url }}">Helper Commands</a></li>
+            <li><a href="{{ 'reference/health-checks/' | url }}">Health Checks</a></li>
+            <li><a href="{{ 'reference/build-verification/' | url }}">Build Verification</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-column">
+          <h3>
+            <span class="twemoji">{% include ".icons/material/folder-account.svg" %}</span>
+            Project
+          </h3>
+          <ul>
+            <li><a href="{{ 'project/authors/' | url }}">Authors</a></li>
+            <li><a href="{{ 'project/contributing/' | url }}">Contributing</a></li>
+            <li><a href="{{ 'project/roadmap/' | url }}">Roadmap</a></li>
+            <li><a href="{{ 'project/security/' | url }}">Security</a></li>
+            <li><a href="{{ 'project/license/' | url }}">License</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-column">
+          <h3>
+            <span class="twemoji">{% include ".icons/material/help-circle-outline.svg" %}</span>
+            Appendix
+          </h3>
+          <ul>
+            <li><a href="{{ 'appendix/faq/' | url }}">FAQ</a></li>
+            <li><a href="{{ 'appendix/glossary/' | url }}">Glossary</a></li>
+            <li><a href="{{ 'appendix/common-commands/' | url }}">Common Commands</a></li>
+            <li><a href="{{ 'appendix/support/' | url }}">Support</a></li>
+            <li><a href="{{ 'appendix/external-references/' | url }}">External References</a></li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
       {% include "partials/copyright.html" %}
@@ -53,4 +196,5 @@
       {% endif %}
     </div>
   </div>
+
 </footer>

@@ -419,7 +419,26 @@
 
 /*
   Footer Navigation
+  ------------------------------------------------------------------------
+  .footer-grid itself (the six-column sitemap layout) is unchanged from
+  its original definition. .md-footer-directory is new: it's the
+  full-width background band around it, now rendered site-wide via
+  overrides/partials/footer.html rather than only on the landing page.
 ==============================================================================*/
+
+.md-footer-directory{
+
+    background:var(--baobab-surface);
+
+    padding-block:var(--baobab-space-8);
+
+}
+
+[data-md-color-scheme="slate"] .md-footer-directory{
+
+    background:var(--baobab-surface-dark);
+
+}
 
 .footer-grid{
 

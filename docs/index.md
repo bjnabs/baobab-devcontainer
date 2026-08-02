@@ -8,7 +8,7 @@ template: home.html
 hide:
   - navigation
   - toc
-  - footer 
+  - footer
   - feedback
 ---
 
@@ -830,85 +830,8 @@ View on GitHub
 
 </section>
 
-
 <!-- ==========================================================================
      DOCUMENTATION DIRECTORY
-============================================================================ -->
-
-## Explore the Documentation
-
-Everything you need—from your first development environment to the underlying architecture—is organized into six comprehensive documentation sections.
-
-<section class="footer-grid">
-
-<div class="footer-column">
-
-### :material-book-open-page-variant: Introduction
-
-- [Overview](introduction/overview.md)
-- [Key Features](introduction/key-features.md)
-- [Supported Platforms](introduction/supported-platforms.md)
-- [Included Components](introduction/included.md)
-- [Excluded Components](introduction/excluded.md)
-
-</div>
-
-<div class="footer-column">
-
-### :material-sitemap: Architecture
-
-- [Design Principles](architecture/design-principles.md)
-- [Repository Structure](architecture/repository-structure.md)
-- [Version Management](architecture/version-management.md)
-- [Toolchain](architecture/toolchain.md)
-- [Build Process](architecture/build-process.md)
-
-</div>
-
-<div class="footer-column">
-
-### :material-play-circle: Usage
-
-- [GitHub Codespaces](usage/github-codespaces.md)
-- [VS Code Dev Containers](usage/vscode-devcontainers.md)
-- [Running Locally](usage/running-locally.md)
-
-</div>
-
-<div class="footer-column">
-
-### :material-file-document-outline: Reference
-
-- [Build Arguments](reference/build-arguments.md)
-- [Environment Variables](reference/environment-variables.md)
-- [Helper Commands](reference/helper-commands.md)
-- [Health Checks](reference/health-checks.md)
-- [Build Verification](reference/build-verification.md)
-
-</div>
-
-<div class="footer-column">
-
-### :material-folder-account: Project
-
-- [Authors](project/authors.md)
-- [Contributing](project/contributing.md)
-- [Roadmap](project/roadmap.md)
-- [Security](project/security.md)
-- [License](project/license.md)
-
-</div>
-
-<div class="footer-column">
-
-### :material-help-circle-outline: Appendix
-
-- [FAQ](appendix/faq.md)
-- [Glossary](appendix/glossary.md)
-- [Common Commands](appendix/common-commands.md)
-- [Support](appendix/support.md)
-- [External References](appendix/external-references.md)
-
-</div>
-
-</section>
+     Now rendered site-wide by overrides/partials/footer.html — do not
+     re-add a footer-grid section here, it would duplicate on this page.
+========================================================================== -->
