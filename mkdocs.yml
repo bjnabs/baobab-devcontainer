@@ -121,7 +121,7 @@ site_description: >
   Enterprise-grade, reproducible development environment for the
   BAOBAB Enterprise Platform.
 
-site_author: Nabhold
+site_author: Nabhold Group Africa
 
 site_url: https://nabhold.github.io/baobab-dev/
 
@@ -134,7 +134,7 @@ edit_uri: edit/main/docs/
 # `{year}` is resolved at build time by hooks/copyright.py — do not
 # hand-edit the year here.
 copyright: >-
-  Copyright &copy; {year} Nabhold.
+  Copyright &copy; {year} Nabhold Group Africa | .
   Licensed under the Apache License 2.0.
 
 # ------------------------------------------------------------------------------
