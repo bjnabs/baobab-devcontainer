@@ -5,7 +5,7 @@
  *
  * File
  * ----
- * extra.js
+ * assets/javascripts/extra.js
  *
  * Purpose
  * -------
