@@ -9,12 +9,18 @@
   theme feature — header, search, palette toggle, back-to-top, footer,
   keyboard shortcuts, instant navigation — is inherited unmodified.
 
-  Only ONE block is touched:
+  Two blocks are touched:
 
     tabs   Suppresses the horizontal navigation.tabs bar (theme.features
            in mkdocs.yml) on this page only. Every other page keeps it.
            There is no front-matter `hide:` option for this — removing it
            requires a template override.
+
+    hero   Includes overrides/partials/hero.html — Material's own,
+           previously-unused extension point, rendered outside
+           `.md-content` so the hero can be genuinely full-bleed. See
+           that partial for why the hero's content had to move out of
+           docs/index.md's Markdown to live here.
 
   IMPORTANT — do not override the `content` block here.
   An earlier version of this file did:
@@ -50,4 +56,8 @@
 {% extends "main.html" %}
 
 {% block tabs %}
+{% endblock %}
+
+{% block hero %}
+  {% include "partials/hero.html" %}
 {% endblock %}

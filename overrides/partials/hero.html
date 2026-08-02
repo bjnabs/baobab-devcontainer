@@ -1,0 +1,91 @@
+{#
+  overrides/partials/hero.html
+
+  Full-bleed landing page hero, included from overrides/home.html via
+  Material's native (default-empty) `hero` block — the block base.html
+  provides specifically for this purpose, rendered outside `.md-content`
+  so it can span the full viewport width rather than being constrained to
+  `--baobab-container-max` the way in-markdown content is.
+
+  This is HTML/Jinja, not Markdown: MkDocs does not run its Markdown
+  pipeline (or Jinja {% include %}) inside .md files by default, so this
+  content necessarily lives here rather than in docs/index.md. Everything
+  BELOW the hero on the landing page remains authored in docs/index.md as
+  plain Markdown, unaffected by this split — only the hero itself moved.
+
+  Wrapped in a plain .md-typeset div deliberately: that class is what
+  actually carries every rule in typography.css and components.css
+  (headings, paragraphs, .md-button styling, link colors, etc). Outside
+  `.md-content`, nothing supplies that class automatically the way it does
+  for ordinary page content — so it is added explicitly here rather than
+  hand-duplicating Material's typography/button CSS a second time. This is
+  the same category of bug fixed earlier in overrides/home.html; here it's
+  handled deliberately up front instead of by accident.
+
+  Icon shortcodes (:material-...:) are a Markdown-extension feature
+  (pymdownx.emoji) and are NOT available in this file — none are used
+  below, but keep that in mind if this partial is ever extended.
+#}
+
+<div class="landing-hero-bleed">
+
+  <section class="landing-hero">
+
+    <div class="hero-content md-typeset">
+
+      <h1>Enterprise Development Infrastructure</h1>
+
+      <p>
+        Build faster with a deterministic, enterprise-grade development
+        platform that delivers identical environments across local
+        machines, Dev Containers, GitHub Codespaces, and CI/CD pipelines.
+      </p>
+
+      <div class="hero-actions">
+
+        <a href="usage/" class="md-button md-button--primary">
+          Get Started
+        </a>
+
+        <a href="https://github.com/nabhold/baobab-dev" class="md-button">
+          View on GitHub
+        </a>
+
+      </div>
+
+    </div>
+
+    <div class="hero-terminal">
+
+      <div class="hero-terminal-header">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <pre><code>$ ./scripts/verify.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BAOBAB Development Platform Verification
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Ubuntu 26.04 LTS
+✓ Python 3.14
+✓ uv Package Manager
+✓ Flutter SDK
+✓ Node.js LTS
+✓ Docker CLI
+✓ PostgreSQL Client
+✓ GitHub CLI
+
+Environment verified.
+
+Ready for development.</code></pre>
+
+    </div>
+
+  </section>
+
+</div>

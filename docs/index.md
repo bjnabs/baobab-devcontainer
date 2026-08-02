@@ -14,70 +14,11 @@ hide:
 
 <!-- ==========================================================================
      HERO
+     Lives in overrides/partials/hero.html (rendered via the `hero` block
+     in overrides/home.html), NOT here — it needs to sit outside
+     .md-content for a genuine full-bleed layout, which only a template
+     partial can do. Do not re-add a hero section to this file.
 ========================================================================== -->
-
-<section class="landing-hero">
-
-<div class="hero-content">
-
-# Enterprise Development Infrastructure
-
-Build faster with a deterministic, enterprise-grade development platform that delivers identical environments across local machines, Dev Containers, GitHub Codespaces, and CI/CD pipelines.
-
-<div class="hero-actions">
-
-<a
-    href="usage/"
-    class="md-button md-button--primary">
-    Get Started
-</a>
-
-<a
-    href="https://github.com/nabhold/baobab-dev"
-    class="md-button">
-    View on GitHub
-</a>
-
-</div>
-
-</div>
-
-<div class="hero-terminal">
-
-<div class="hero-terminal-header">
-
-<span></span>
-<span></span>
-<span></span>
-
-</div>
-
-```console
-$ ./scripts/verify.sh
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-BAOBAB Development Platform Verification
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✓ Ubuntu 26.04 LTS
-✓ Python 3.14
-✓ uv Package Manager
-✓ Flutter SDK
-✓ Node.js LTS
-✓ Docker CLI
-✓ PostgreSQL Client
-✓ GitHub CLI
-
-Environment verified.
-
-Ready for development.
-```
-
-</div>
-
-</section>
 
 <!-- ==========================================================================
      BUILT ON PROVEN TECHNOLOGIES
@@ -888,6 +829,7 @@ View on GitHub
 </div>
 
 </section>
+
 
 <!-- ==========================================================================
      DOCUMENTATION DIRECTORY

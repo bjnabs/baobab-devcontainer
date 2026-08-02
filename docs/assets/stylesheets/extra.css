@@ -101,7 +101,35 @@
   shared, mobile-first .hero rule defined in layout.css. That shared rule
   is left completely untouched and remains available for any future
   in-docs mini-hero use.
+
+  Lives in overrides/partials/hero.html, rendered via Material's `hero`
+  block — OUTSIDE `.md-content`. Two consequences that don't apply to any
+  other class in this file:
+
+    1. .landing-hero-bleed exists purely to give the hero its own
+       full-width background, independent of `--baobab-container-max`.
+       .landing-hero itself still constrains its CONTENT to that same
+       max-width, centered inside the full-bleed band — the standard
+       "full-bleed section, contained content" pattern.
+
+    2. .landing-hero now needs its own explicit horizontal padding.
+       Previously it sat inside `.md-content`, which supplies horizontal
+       padding on every ordinary page. Outside `.md-content`, nothing
+       does that automatically, so it's declared here instead.
 ==============================================================================*/
+
+.landing-hero-bleed {
+
+    width: 100%;
+    background: var(--baobab-surface);
+
+}
+
+[data-md-color-scheme="slate"] .landing-hero-bleed {
+
+    background: var(--baobab-surface-dark);
+
+}
 
 .landing-hero {
 
@@ -111,12 +139,13 @@
     max-width: var(--baobab-container-max);
     margin-inline: auto;
     padding-block: var(--baobab-space-12);
+    padding-inline: var(--baobab-container-padding);
 
 }
 
-@media (min-width:1024px) {
+@media (min-width:1024px){
 
-    .landing-hero {
+    .landing-hero{
 
         grid-template-columns: 1.1fr 0.9fr;
 
@@ -124,29 +153,29 @@
 
 }
 
-.hero-content {
+.hero-content{
 
-    display: flex;
-    flex-direction: column;
-    gap: var(--baobab-space-5);
-
-}
-
-.hero-actions {
-
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--baobab-space-3);
+    display:flex;
+    flex-direction:column;
+    gap:var(--baobab-space-5);
 
 }
 
-.hero-badges {
+.hero-actions{
 
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    display:flex;
+    flex-wrap:wrap;
+    gap:var(--baobab-space-3);
 
-    font-size: 0.875rem;
+}
+
+.hero-badges{
+
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.75rem;
+
+    font-size:0.875rem;
 
 }
 
@@ -156,68 +185,68 @@
   Terminal Preview
 ==============================================================================*/
 
-.hero-terminal {
+.hero-terminal{
 
-    background: var(--baobab-background-dark);
-    color: var(--baobab-text-dark);
+    background:var(--baobab-background-dark);
+    color:var(--baobab-text-dark);
 
-    border-radius: var(--baobab-radius);
+    border-radius:var(--baobab-radius);
 
-    box-shadow: var(--baobab-shadow-large-dark);
+    box-shadow:var(--baobab-shadow-large-dark);
 
-    overflow: hidden;
-
-}
-
-.hero-terminal-header {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 0.5rem;
-
-    padding: 0.75rem 1rem;
-
-    background: #1b2432;
+    overflow:hidden;
 
 }
 
-.hero-terminal-header span {
+.hero-terminal-header{
 
-    width: 12px;
+    display:flex;
 
-    height: 12px;
+    align-items:center;
 
-    border-radius: 50%;
+    gap:0.5rem;
 
-}
+    padding:0.75rem 1rem;
 
-.hero-terminal-header span:nth-child(1) {
-
-    background: #ef4444;
+    background:#1b2432;
 
 }
 
-.hero-terminal-header span:nth-child(2) {
+.hero-terminal-header span{
 
-    background: #f59e0b;
+    width:12px;
 
-}
+    height:12px;
 
-.hero-terminal-header span:nth-child(3) {
-
-    background: #22c55e;
+    border-radius:50%;
 
 }
 
-.hero-terminal pre {
+.hero-terminal-header span:nth-child(1){
 
-    margin: 0;
+    background:#ef4444;
 
-    padding: 1.5rem;
+}
 
-    overflow: auto;
+.hero-terminal-header span:nth-child(2){
+
+    background:#f59e0b;
+
+}
+
+.hero-terminal-header span:nth-child(3){
+
+    background:#22c55e;
+
+}
+
+.hero-terminal pre{
+
+    margin:0;
+
+    padding:1.5rem;
+
+    overflow:auto;
 
 }
 
@@ -227,37 +256,37 @@
   Technology Strip
 ==============================================================================*/
 
-.tech-strip {
+.tech-strip{
 
-    display: grid;
+    display:grid;
 
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
 
-    gap: 1rem;
+    gap:1rem;
 
-    text-align: center;
+    text-align:center;
 
-    margin-block: var(--baobab-space-10);
-
-}
-
-.tech-item {
-
-    padding: 1rem;
-
-    border: 1px solid var(--baobab-border);
-
-    border-radius: var(--baobab-radius-small);
-
-    background: var(--baobab-surface);
+    margin-block:var(--baobab-space-10);
 
 }
 
-[data-md-color-scheme="slate"] .tech-item {
+.tech-item{
 
-    background: var(--baobab-surface-dark);
+    padding:1rem;
 
-    border-color: var(--baobab-border-dark);
+    border:1px solid var(--baobab-border);
+
+    border-radius:var(--baobab-radius-small);
+
+    background:var(--baobab-surface);
+
+}
+
+[data-md-color-scheme="slate"] .tech-item{
+
+    background:var(--baobab-surface-dark);
+
+    border-color:var(--baobab-border-dark);
 
 }
 
@@ -267,29 +296,29 @@
   Capability Icons
 ==============================================================================*/
 
-.icon-grid {
+.icon-grid{
 
-    display: grid;
+    display:grid;
 
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
 
-    gap: var(--baobab-space-5);
-
-}
-
-.icon-card {
-
-    text-align: center;
-
-    padding: 2rem 1rem;
+    gap:var(--baobab-space-5);
 
 }
 
-.icon-card .twemoji {
+.icon-card{
 
-    font-size: 2rem;
+    text-align:center;
 
-    margin-bottom: 1rem;
+    padding:2rem 1rem;
+
+}
+
+.icon-card .twemoji{
+
+    font-size:2rem;
+
+    margin-bottom:1rem;
 
 }
 
@@ -299,29 +328,29 @@
   Metrics
 ==============================================================================*/
 
-.metrics {
+.metrics{
 
-    display: grid;
+    display:grid;
 
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
 
-    gap: var(--baobab-space-4);
-
-}
-
-.metric {
-
-    text-align: center;
-
-    padding: 1.5rem;
+    gap:var(--baobab-space-4);
 
 }
 
-.metric strong {
+.metric{
 
-    display: block;
+    text-align:center;
 
-    font-size: 1.8rem;
+    padding:1.5rem;
+
+}
+
+.metric strong{
+
+    display:block;
+
+    font-size:1.8rem;
 
 }
 
@@ -331,25 +360,25 @@
   Documentation Cards
 ==============================================================================*/
 
-.documentation-grid {
+.documentation-grid{
 
-    display: grid;
+    display:grid;
 
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
 
-    gap: var(--baobab-space-5);
+    gap:var(--baobab-space-5);
 
 }
 
-.documentation-card {
+.documentation-card{
 
-    display: flex;
+    display:flex;
 
-    flex-direction: column;
+    flex-direction:column;
 
-    justify-content: space-between;
+    justify-content:space-between;
 
-    min-height: 220px;
+    min-height:220px;
 
 }
 
@@ -359,28 +388,30 @@
   CTA Banner
 ==============================================================================*/
 
-.cta-banner {
+.cta-banner{
 
-    margin-block: var(--baobab-space-12);
+    margin-block:var(--baobab-space-12);
 
-    padding: 4rem 3rem;
+    padding:4rem 3rem;
 
-    border-radius: var(--baobab-radius);
+    border-radius:var(--baobab-radius);
 
     background:
-        linear-gradient(135deg,
+        linear-gradient(
+            135deg,
             var(--baobab-primary),
-            var(--baobab-background-dark));
+            var(--baobab-background-dark)
+        );
 
-    color: white;
+    color:white;
 
-    text-align: center;
+    text-align:center;
 
 }
 
-.cta-banner .md-button {
+.cta-banner .md-button{
 
-    margin-top: 1.5rem;
+    margin-top:1.5rem;
 
 }
 
@@ -390,37 +421,37 @@
   Footer Navigation
 ==============================================================================*/
 
-.footer-grid {
+.footer-grid{
 
-    display: grid;
+    display:grid;
 
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
 
-    gap: var(--baobab-space-6);
+    gap:var(--baobab-space-6);
 
-    margin-top: var(--baobab-space-10);
-
-}
-
-.footer-grid h3 {
-
-    margin-bottom: 1rem;
+    margin-top:var(--baobab-space-10);
 
 }
 
-.footer-grid ul {
+.footer-grid h3{
 
-    list-style: none;
-
-    margin: 0;
-
-    padding: 0;
+    margin-bottom:1rem;
 
 }
 
-.footer-grid li {
+.footer-grid ul{
 
-    margin-bottom: 0.5rem;
+    list-style:none;
+
+    margin:0;
+
+    padding:0;
+
+}
+
+.footer-grid li{
+
+    margin-bottom:0.5rem;
 
 }
 
@@ -430,15 +461,15 @@
   Section Headings
 ==============================================================================*/
 
-.section-heading {
+.section-heading{
 
-    text-align: center;
+    text-align:center;
 
-    max-width: 52rem;
+    max-width:52rem;
 
-    margin-inline: auto;
+    margin-inline:auto;
 
-    margin-bottom: var(--baobab-space-8);
+    margin-bottom:var(--baobab-space-8);
 
 }
 
@@ -448,9 +479,9 @@
   Material Tab Refinements
 ==============================================================================*/
 
-.md-typeset .tabbed-set {
+.md-typeset .tabbed-set{
 
-    margin-top: var(--baobab-space-8);
+    margin-top:var(--baobab-space-8);
 
 }
 
@@ -460,17 +491,17 @@
   Responsive Landing Hero
 ==============================================================================*/
 
-@media (max-width:1023px) {
+@media (max-width:1023px){
 
-    .landing-hero {
+    .landing-hero{
 
-        text-align: center;
+        text-align:center;
 
     }
 
-    .hero-actions {
+    .hero-actions{
 
-        justify-content: center;
+        justify-content:center;
 
     }
 
@@ -554,9 +585,11 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: color-mix(in srgb,
-            var(--md-primary-fg-color) 12%,
-            transparent);
+    background: color-mix(
+        in srgb,
+        var(--md-primary-fg-color) 12%,
+        transparent
+    );
     font-size: 1.6rem;
     color: var(--md-primary-fg-color);
 
@@ -697,9 +730,11 @@
     border-bottom: 1px solid var(--baobab-border);
 
     background:
-        linear-gradient(180deg,
-            rgba(255, 255, 255, .03),
-            rgba(0, 0, 0, .04));
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,.03),
+            rgba(0,0,0,.04)
+        );
 
     font-size: .85rem;
     font-weight: 600;
