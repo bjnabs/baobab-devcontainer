@@ -115,7 +115,7 @@ exclude_docs: |
 # Site Information
 # ------------------------------------------------------------------------------
 
-site_name: BAOBAB Development
+site_name: BAOBAB
 
 site_description: >
   Enterprise-grade, reproducible development environment for the
@@ -134,7 +134,7 @@ edit_uri: edit/main/docs/
 # `{year}` is resolved at build time by hooks/copyright.py — do not
 # hand-edit the year here.
 copyright: >-
-  Copyright &copy; {year} Nabhold Group Africa | .
+  Copyright &copy; {year} Nabhold Group Africa | 
   Licensed under the Apache License 2.0.
 
 # ------------------------------------------------------------------------------
