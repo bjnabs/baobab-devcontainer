@@ -166,10 +166,14 @@ theme:
 
     # Navigation
     - navigation.instant
+    - navigation.instant.prefetch
     - navigation.instant.progress
+    - navigation.instant.preview
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
+    - navigation.path
     - navigation.indexes
     - navigation.top
     - navigation.footer
