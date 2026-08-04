@@ -1,3 +1,8 @@
+---
+title: License
+description: Review the Apache 2.0 license terms that govern the BAOBAB repository.
+---
+
 # License
 
 The BAOBAB Development Container is released under the **Apache License 2.0**.

@@ -1,3 +1,8 @@
+---
+title: Supported Platforms
+description: Discover where BAOBAB can be used across local machines, cloud environments, and CI systems.
+---
+
 # Supported Platforms
 
 The BAOBAB Development Container is designed to provide a consistent development experience across local workstations, cloud-hosted development environments, and continuous integration systems. Regardless of where the container runs, developers should work with the same toolchain, configuration, and runtime behavior.

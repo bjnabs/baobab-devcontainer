@@ -1,3 +1,8 @@
+---
+title: Key Features
+description: Review the core capabilities that make BAOBAB useful for modern development teams.
+---
+
 # Key Features
 
 The BAOBAB Development Container is designed to deliver a consistent, reproducible, and efficient development experience across local workstations, cloud-hosted environments, and continuous integration systems. Its architecture emphasizes determinism, maintainability, and developer productivity while remaining easy to understand and extend.

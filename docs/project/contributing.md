@@ -1,3 +1,8 @@
+---
+title: Contributing
+description: Learn how to contribute changes, documentation, and improvements to BAOBAB.
+---
+
 # Contributing
 
 Contributions are welcome and play an important role in the continued evolution of the BAOBAB Development Container. Whether improving documentation, refining the Dockerfile, enhancing automation, or introducing new capabilities, every contribution should support the project's core principles of simplicity, reproducibility, and maintainability.

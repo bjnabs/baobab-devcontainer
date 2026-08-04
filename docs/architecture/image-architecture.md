@@ -1,3 +1,8 @@
+---
+title: Image Architecture
+description: Learn how the BAOBAB container image is structured and how the runtime layers support the toolchain.
+---
+
 # Image Architecture
 
 The BAOBAB Development Container is built using a multi-stage Docker architecture that separates one-time build activities from the final runtime environment. This design minimizes image size, improves build performance, and maintains a clean separation between build artifacts and the finished development container.

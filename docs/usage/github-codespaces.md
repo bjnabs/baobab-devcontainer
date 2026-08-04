@@ -1,3 +1,8 @@
+---
+title: GitHub Codespaces
+description: Learn how to launch BAOBAB in GitHub Codespaces with a predictable cloud-based workflow.
+---
+
 # GitHub Codespaces
 
 The BAOBAB Development Container is designed to integrate seamlessly with GitHub Codespaces, providing a fully configured, cloud-hosted development environment that is consistent with local development and continuous integration workflows.

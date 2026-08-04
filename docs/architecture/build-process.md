@@ -1,3 +1,8 @@
+---
+title: Build Process
+description: Understand how the BAOBAB development container is built, validated, and published from source.
+---
+
 # Build Process
 
 The BAOBAB Development Container follows a deterministic build process that separates configuration, artifact preparation, image assembly, verification, and publication into distinct phases.

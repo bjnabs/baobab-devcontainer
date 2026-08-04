@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 site/
+site-dev/
 
 # ------------------------------------------------------------------------------
 # Generated Version Lock
@@ -31,10 +32,15 @@ config/versions.lock
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
+python.*
 
 .venv/
 venv/
 env/
+**/env/
+**/venv/
 
 .pytest_cache/
 .coverage
@@ -45,12 +51,42 @@ htmlcov/
 .ruff_cache/
 .pyre/
 .pytype/
+cython_debug/
 
 # ------------------------------------------------------------------------------
 # uv
 # ------------------------------------------------------------------------------
 
 .python-version.local
+
+# Python packaging
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual envs
+.Python
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# mkdocs builds and local site caches
+site/
+site-dev/
+.cache/
+
+# Documentation assets
+docs/assets/images/*.png
+docs/assets/images/*.ico
+
 
 # ------------------------------------------------------------------------------
 # IDEs

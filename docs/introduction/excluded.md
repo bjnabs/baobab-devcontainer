@@ -1,3 +1,8 @@
+---
+title: What's Not Included
+description: Review the tools and capabilities that BAOBAB intentionally leaves out to keep the environment focused.
+---
+
 # What's Not Included
 
 The BAOBAB Development Container intentionally focuses on providing a standardized development environment rather than a complete application runtime. To keep the image maintainable, portable, and broadly applicable across projects, certain components are deliberately excluded.

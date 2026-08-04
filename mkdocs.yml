@@ -153,9 +153,9 @@ theme:
   # landing page's distinct rendering — do not remove.
   custom_dir: overrides
 
-  logo: assets/images/logo.png
+  logo: assets/images/logo.svg
 
-  favicon: assets/images/favicon.png
+  favicon: assets/images/favicon.svg
 
   icon:
     # Icon shown next to the repository link in the header. Unset, Material

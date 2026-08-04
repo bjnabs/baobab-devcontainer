@@ -1,3 +1,8 @@
+---
+title: Overview
+description: Get a concise view of the BAOBAB development container and its primary goals.
+---
+
 # Overview
 
 The BAOBAB Development Container provides a standardized, production-grade development environment for the BAOBAB Enterprise Platform. It encapsulates the complete development toolchain into a single Docker image, ensuring that every developer, regardless of operating system or workstation configuration, works within an identical environment.

@@ -1,3 +1,8 @@
+---
+title: Version Management
+description: See how BAOBAB pins and manages versions for the base image, runtimes, and supporting tools.
+---
+
 # Version Management
 
 One of the defining characteristics of the BAOBAB Development Container is its deterministic approach to version management. Rather than allowing the Dockerfile to discover or resolve software versions during the build process, all version decisions are made beforehand through a dedicated configuration workflow.

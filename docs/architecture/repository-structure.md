@@ -1,3 +1,8 @@
+---
+title: Repository Structure
+description: Explore the BAOBAB repository layout and the purpose of the key directories and scripts.
+---
+
 # Repository Structure
 
 The BAOBAB Development Container repository is organized to separate infrastructure, configuration, automation, and documentation into clearly defined areas. This structure improves maintainability, simplifies navigation, and reinforces the project's philosophy of separation of concerns.

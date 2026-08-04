@@ -1,3 +1,8 @@
+---
+title: Build Arguments
+description: Review the arguments used to configure and customize the BAOBAB container build.
+---
+
 # Build Arguments
 
 The BAOBAB Development Container uses Docker build arguments to parameterize selected aspects of the image build while maintaining deterministic and reproducible outputs.

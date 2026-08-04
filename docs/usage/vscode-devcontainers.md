@@ -1,3 +1,8 @@
+---
+title: VS Code Dev Containers
+description: Use BAOBAB from within Visual Studio Code with the Dev Containers workflow.
+---
+
 # VS Code Dev Containers
 
 The BAOBAB Development Container is designed to work seamlessly with Visual Studio Code through the Dev Containers extension. This integration provides a fully configured, containerized development environment directly within the editor, allowing developers to work inside the same standardized environment used by GitHub Codespaces and continuous integration pipelines.

@@ -1,3 +1,8 @@
+---
+title: Introduction
+description: Explore the BAOBAB development container and its key concepts, architecture, and supported workflows.
+---
+
 # BAOBAB Development Container
 
 The **BAOBAB Development Container** is the official, reproducible development environment for the **BAOBAB Enterprise Platform**, maintained by **Nabhold Group Africa – Platform Engineering**.

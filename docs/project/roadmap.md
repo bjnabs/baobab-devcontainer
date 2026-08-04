@@ -1,3 +1,8 @@
+---
+title: Roadmap
+description: See the planned direction and near-term priorities for BAOBAB.
+---
+
 # Roadmap
 
 The BAOBAB Development Container is intended to serve as the long-term foundation for the BAOBAB Enterprise Platform's development environment. While the current implementation already provides a deterministic, reproducible, and maintainable toolchain, the project will continue to evolve alongside the platform and the broader container ecosystem.

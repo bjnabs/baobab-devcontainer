@@ -1,3 +1,8 @@
+---
+title: Design Principles
+description: Review the architectural principles that make BAOBAB deterministic, maintainable, and reproducible.
+---
+
 # Design Principles
 
 The BAOBAB Development Container is built around a small set of architectural principles that guide every design decision. These principles ensure that the development environment remains predictable, maintainable, secure, and easy to evolve over time.

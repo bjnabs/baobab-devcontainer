@@ -1,3 +1,8 @@
+---
+title: Security
+description: Review BAOBAB security guidance, disclosure practices, and operational expectations.
+---
+
 # Security
 
 Security is a fundamental design consideration of the BAOBAB Development Container. Although the image is intended for development rather than production workloads, it follows industry best practices to minimize unnecessary risk while maintaining a productive developer experience.

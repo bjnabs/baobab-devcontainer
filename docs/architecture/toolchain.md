@@ -1,3 +1,8 @@
+---
+title: Toolchain
+description: Inspect the languages, runtimes, and developer tooling that make up the BAOBAB environment.
+---
+
 # Toolchain
 
 The BAOBAB Development Container includes a curated collection of language runtimes, development tools, command-line utilities, and supporting software that together provide a complete and consistent development environment.

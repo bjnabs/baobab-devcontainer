@@ -1,3 +1,8 @@
+---
+title: Health Checks
+description: Understand the validation and health checks that help confirm BAOBAB is working correctly.
+---
+
 # Health Checks
 
 The BAOBAB Development Container includes health checks that help determine whether the development environment is functioning as expected. Unlike build verification, which validates the image during construction, health checks assess the operational state of a running container.

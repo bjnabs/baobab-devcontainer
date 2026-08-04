@@ -1,3 +1,8 @@
+---
+title: Helper Commands
+description: Find the helper commands and scripts that simplify BAOBAB maintenance and troubleshooting.
+---
+
 # Helper Commands
 
 The BAOBAB Development Container includes a set of built-in helper commands that simplify common development tasks and provide a consistent operational interface across all supported environments.

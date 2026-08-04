@@ -1,3 +1,8 @@
+---
+title: Running Locally
+description: Set up BAOBAB on your workstation and run the development container locally with Docker.
+---
+
 # Running Locally
 
 The BAOBAB Development Container is designed to provide a consistent development environment on any workstation capable of running Docker. Whether using Linux, macOS, or Windows, developers interact with the same container image, ensuring a predictable and reproducible development experience.

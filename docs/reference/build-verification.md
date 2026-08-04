@@ -1,3 +1,8 @@
+---
+title: Build Verification
+description: Learn how to verify BAOBAB builds and validate the container artifacts before release.
+---
+
 # Build Verification
 
 The BAOBAB Development Container includes an automated build verification process that validates the integrity of the development environment before an image is published or used by developers.

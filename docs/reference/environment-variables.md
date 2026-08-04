@@ -1,3 +1,8 @@
+---
+title: Environment Variables
+description: Discover the environment variables used by the BAOBAB build and helper scripts.
+---
+
 # Environment Variables
 
 The BAOBAB Development Container uses environment variables to establish a consistent runtime environment for developers and the tools running inside the container.

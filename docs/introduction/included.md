@@ -1,3 +1,8 @@
+---
+title: What's Included
+description: See the tools, runtimes, and utilities that are bundled into the BAOBAB development container.
+---
+
 # What's Included
 
 The BAOBAB Development Container provides a carefully curated development environment containing the tools, runtimes, and utilities required to develop, test, and maintain applications on the BAOBAB Enterprise Platform.
