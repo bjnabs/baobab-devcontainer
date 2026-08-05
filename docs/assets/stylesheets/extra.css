@@ -118,19 +118,6 @@
        does that automatically, so it's declared here instead.
 ==============================================================================*/
 
-.landing-hero-bleed {
-
-    width: 100%;
-    background: var(--baobab-surface);
-
-}
-
-[data-md-color-scheme="slate"] .landing-hero-bleed {
-
-    background: var(--baobab-surface-dark);
-
-}
-
 .landing-hero {
 
     display: grid;
@@ -153,14 +140,6 @@
 
 }
 
-.hero-content {
-
-    display: flex;
-    flex-direction: column;
-    gap: var(--baobab-space-5);
-
-}
-
 .hero-actions {
 
     display: flex;
@@ -168,89 +147,6 @@
     gap: var(--baobab-space-3);
 
 }
-
-.hero-badges {
-
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-
-    font-size: 0.875rem;
-
-}
-
-
-
-/*
-  Terminal Preview
-==============================================================================*/
-
-.hero-terminal {
-
-    background: var(--baobab-background-dark);
-    color: var(--baobab-text-dark);
-
-    border-radius: var(--baobab-radius);
-
-    box-shadow: var(--baobab-shadow-large-dark);
-
-    overflow: hidden;
-
-}
-
-.hero-terminal-header {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 0.5rem;
-
-    padding: 0.75rem 1rem;
-
-    background: #1b2432;
-
-}
-
-.hero-terminal-header span {
-
-    width: 12px;
-
-    height: 12px;
-
-    border-radius: 50%;
-
-}
-
-.hero-terminal-header span:nth-child(1) {
-
-    background: #ef4444;
-
-}
-
-.hero-terminal-header span:nth-child(2) {
-
-    background: #f59e0b;
-
-}
-
-.hero-terminal-header span:nth-child(3) {
-
-    background: #22c55e;
-
-}
-
-.hero-terminal pre {
-
-    margin: 0;
-
-    padding: 1.5rem;
-
-    overflow: auto;
-
-}
-
-
 
 /*
   Technology Strip
@@ -470,36 +366,6 @@
 
     margin-bottom: 0.5rem;
     font-size: medium
-}
-
-
-
-/*
-  Section Headings
-==============================================================================*/
-
-.section-heading {
-
-    text-align: center;
-
-    max-width: 52rem;
-
-    margin-inline: auto;
-
-    margin-bottom: var(--baobab-space-8);
-
-}
-
-
-
-/*
-  Material Tab Refinements
-==============================================================================*/
-
-.md-typeset .tabbed-set {
-
-    margin-top: var(--baobab-space-8);
-
 }
 
 
@@ -1022,3 +888,5 @@
         grid-template-columns: 1fr;
     }
 }
+
+@import url("custom.css");
