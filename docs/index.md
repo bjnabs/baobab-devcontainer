@@ -25,7 +25,7 @@ hide:
 <!-- ==========================================================================
      BUILT ON PROVEN TECHNOLOGIES
 ========================================================================== -->
-
+{% block content %}
 ## Built on Proven Technologies
 
 <section class="tech-strip">
@@ -837,3 +837,4 @@ View on GitHub
      Now rendered site-wide by overrides/partials/footer.html — do not
      re-add a footer-grid section here, it would duplicate on this page.
 ========================================================================== -->
+{% endblock %}
