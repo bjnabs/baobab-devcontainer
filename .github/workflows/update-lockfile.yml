@@ -1,0 +1,128 @@
+# ==============================================================================
+# BAOBAB Enterprise Platform
+# Automated Lockfile Maintenance & Dependency Drift Detector
+#
+# File: .github/workflows/update-lockfile.yml
+#
+# PURPOSE & RATIONALE:
+# --------------------
+# 1. Prevent Version Drift: Tools declared with "latest" in config/versions.yaml
+#    naturally evolve over time. Left unchecked, developers lose track of upstream
+#    breaking changes or security fixes.
+#
+# 2. Automated PR Flow (Renovate/Dependabot Style): Instead of resolving "latest"
+#    dynamically inside every release build (which makes builds non-deterministic),
+#    this workflow periodically evaluates config/versions.yaml via resolve.sh.
+#    If drift is detected, it commits updated versions.lock & .python-version
+#    to a isolated PR branch for human review and automated testing.
+#
+# 3. Supply Chain Hardening: All GitHub Actions are pinned to full 40-character
+#    commit SHAs to eliminate risks from hijacked or modified release tags.
+# ==============================================================================
+
+name: Scheduled Lockfile Update
+
+on:
+  # ----------------------------------------------------------------------------
+  # Schedule: Triggers every Monday at 00:00 UTC.
+  # Ensures upstream tool releases are evaluated weekly without manual intervention.
+  # ----------------------------------------------------------------------------
+  schedule:
+    - cron: "0 0 * * 1"
+
+  # ----------------------------------------------------------------------------
+  # Manual Dispatch: Allows repository maintainers to run lockfile resolution
+  # on demand from the GitHub Actions UI.
+  # ----------------------------------------------------------------------------
+  workflow_dispatch:
+
+# ------------------------------------------------------------------------------
+# Least Privilege Global Security Standard
+# RATIONALE: Restrict default workflow execution permissions to strict read-only.
+# Elevation to write permissions occurs strictly within specific job blocks.
+# ------------------------------------------------------------------------------
+permissions:
+  contents: read
+
+jobs:
+
+  # ============================================================================
+  # Job: Check Updates & Generate Pull Request
+  # ============================================================================
+  check-updates:
+    name: Check Drift & Open Pull Request
+    runs-on: ubuntu-26.04
+
+    # --------------------------------------------------------------------------
+    # Job-level Permission Elevation
+    # RATIONALE: Creating branches and opening PRs requires writing to repository
+    # contents and accessing the pull-requests API endpoint.
+    # --------------------------------------------------------------------------
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # ------------------------------------------------------------------------
+      # Step 1: Checkout Repository
+      # RATIONALE: Immutable SHA pinning (@11bd71901bbe5b1630ceea73d27597364c9af683)
+      # guarantees the checkout logic cannot be tampered with via moving git tags.
+      # ------------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # ------------------------------------------------------------------------
+      # Step 2: Install yq Dependency
+      # RATIONALE: resolve.sh requires yq v4+ to parse YAML input manifests.
+      # ------------------------------------------------------------------------
+      - name: Install yq CLI dependency
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      # ------------------------------------------------------------------------
+      # Step 3: Execute Version Resolver
+      # RATIONALE: Evaluates config/versions.yaml, queries upstream GitHub APIs,
+      # calculates SHA256 checksums, and updates config/versions.lock.
+      # ------------------------------------------------------------------------
+      - name: Run version resolution script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x config/resolve.sh
+          ./config/resolve.sh
+
+      # ------------------------------------------------------------------------
+      # Step 4: Create Pull Request on Lockfile Drift
+      # RATIONALE:
+      # - Compares current branch state against git HEAD.
+      # - If config/versions.lock or .python-version were modified by resolve.sh,
+      #   a new branch 'automation/weekly-lockfile-update' is created and a PR
+      #   is submitted.
+      # - If no changes are detected, this step gracefully no-ops without error.
+      # ------------------------------------------------------------------------
+      - name: Open Pull Request if lockfile drift exists
+        uses: peter-evans/create-pull-request@c5a029f1ef0021a8d0092dd9d18005370258d4a9 # v6.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(deps): weekly update of versions.lock and .python-version"
+          title: "chore(deps): automated weekly toolchain lockfile update"
+          body: |
+            ## Automated Lockfile Maintenance
+
+            This PR was automatically generated by the scheduled `.github/workflows/update-lockfile.yml` workflow.
+
+            ### Updated Lockfile Artifacts
+            - `config/versions.lock`
+            - `.python-version`
+
+            ### Verification & Merge Process
+            1. CI will run multi-arch container builds, Trivy vulnerability scans, and smoke tests against this PR.
+            2. Review the lockfile diff to verify updated versions and checksum hashes.
+            3. Approve and merge when CI checks pass.
+          branch: "automation/weekly-lockfile-update"
+          delete-branch: true
+          labels: |
+            dependencies
+            automated-pr
