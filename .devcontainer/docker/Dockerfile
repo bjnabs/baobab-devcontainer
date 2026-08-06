@@ -1,281 +1,511 @@
 # syntax=docker/dockerfile:1.7
+#
 # =============================================================================
 # BAOBAB Enterprise Platform — Standard Development Container
 # =============================================================================
 # Maintained by: Nabhold Group Africa — Platform Engineering
 # Registry:      ghcr.io/nabhold/baobab-dev
 #
-# File: .devcontainer/docker/Dockerfile
+# This image is the single source of truth for the BAOBAB local development
+# environment. It is built for GitHub Codespaces and Dev Containers (VS Code /
+# JetBrains Gateway) alike, and is also usable as a plain Docker image for CI
+# steps that need the same toolchain as developers.
 #
-# PURPOSE & SECURITY RATIONALE:
-# -----------------------------
-# 1. Zero-Trust Binary Downloads: Every third-party CLI tool binary and SDK archive
-#    downloaded during container construction is cryptographically validated against
-#    its expected SHA256 digest exported in `config/versions.lock`.
+# Design principles:
+#   - Deterministic: every language runtime and CLI tool version other than
+#     the Ubuntu base image is read exclusively from config/versions.lock, a
+#     file generated OUTSIDE of Docker by config/resolve.sh. This Dockerfile
+#     never executes resolve.sh and never re-derives a version on its own —
+#     it only consumes the lock file that was produced (and committed to the
+#     build context) before `docker build` was invoked. This keeps image
+#     builds reproducible: the same versions.lock always produces the same
+#     image content.
+#   - Build ARGs: VERSION, BUILD_DATE, REVISION are pure image metadata,
+#     always supplied by CI. UBUNTU_VERSION below is the one exception to
+#     "versions come only from versions.lock" (see next bullet) — it ships
+#     with a hard-coded default and normally requires no --build-arg at all.
+#   - Ubuntu base image: `FROM` instructions are resolved by BuildKit before
+#     the build context (and therefore versions.lock) is available, so the
+#     base image tag cannot be sourced from a context file the way every
+#     other tool version can. Rather than repeating a literal Ubuntu tag in
+#     three separate `FROM` lines, it is declared once as `ARG
+#     UBUNTU_VERSION=26.04` immediately below and referenced as
+#     `${UBUNTU_VERSION}` in every stage — one place to bump when the base
+#     image changes, and the default means CI does not need to pass this
+#     build-arg for normal builds (it may still override it for a one-off
+#     build if ever needed). If the platform.ubuntu.version entry in
+#     config/versions.yaml is bumped, this ARG's default must be updated to
+#     match by hand as part of that change — versions.yaml documents the
+#     intended base image for humans, but this ARG is what actually pins it.
+#   - Multi-stage: large/one-shot downloads (Flutter SDK, GitHub-released
+#     CLI binaries) are fetched and verified in isolated builder stages, so
+#     the final stage only ever COPYs clean, extracted artifacts. This keeps
+#     the final layer history free of tarballs and speeds up rebuilds because
+#     changing an apt package does not invalidate the Flutter download layer
+#     (and vice versa).
+#   - Multi-arch: every stage is written to work under `docker buildx build
+#     --platform linux/amd64,linux/arm64` using the automatic TARGETARCH /
+#     TARGETPLATFORM build args — no per-arch Dockerfiles.
+#   - Non-root: the final runtime user is `vscode` (UID/GID 1000) with
+#     passwordless sudo, matching the GitHub Codespaces convention.
 #
-# 2. Complete Build Reproducibility: Docker build steps never query external "latest"
-#    endpoints or perform non-deterministic version resolution. All version strings
-#    and checksums are pre-computed outside Docker by `config/resolve.sh`.
-#
-# 3. Supply Chain Integrity: If an upstream GitHub release asset is tampered with,
-#    or if a Man-In-The-Middle (MITM) attack occurs during image build, the
-#    `sha256sum -c` step fails instantly, terminating the Docker build before any
-#    unverified executable code touches the filesystem.
+# Cache-efficiency note on versions.lock:
+#   Every RUN layer that needs a pinned version sources config/versions.lock
+#   after COPYing it into the stage. Because versions.lock is a single file
+#   holding every tool's version, a change ANYWHERE in it (e.g. bumping only
+#   eza) changes the file's checksum and therefore invalidates the COPY layer
+#   — and everything after it — in every stage that copies the file, even
+#   for tools that did not actually change. Builder-stage isolation is still
+#   fully preserved (bumping Flutter never touches the cli-tools stage or
+#   vice versa, since each COPYs its own independent layer), but *within* a
+#   stage the blast radius of any single version bump is "that stage's
+#   version-consuming layers onward." This is an inherent trade-off of using
+#   one lock file with a minimal, fixed set of build ARGs, not an oversight.
 # =============================================================================
 
+# Base image tag, single source of truth for all three stages below. Has a
+# default so CI does not need to pass --build-arg UBUNTU_VERSION for normal
+# builds; override it explicitly only for a deliberate one-off build.
 ARG UBUNTU_VERSION=26.04
 
-# =============================================================================
-# Stage 1: CLI Utilities Builder (ripgrep, fd, bat, eza, task, yq)
-# =============================================================================
-FROM ubuntu:${UBUNTU_VERSION} AS cli-tools
-
-# Target architecture supplied automatically by Docker Buildx (amd64 or arm64)
-ARG TARGETARCH
-
-# Prevent interactive prompts during package installation
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    tar \
-    gzip \
-    xz-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy pre-resolved lockfile containing versions and SHA256 digests
-COPY config/versions.lock /tmp/versions.lock
-
-WORKDIR /tmp/build
-
 # -----------------------------------------------------------------------------
-# Download, Verify SHA256 Checksum, and Extract CLI Tools
-#
-# RATIONALE:
-# - We dynamically map TARGETARCH to the corresponding lockfile variables
-#   (e.g., RIPGREP_SHA256_AMD64 vs RIPGREP_SHA256_ARM64).
-# - `echo "${EXPECTED_SHA}  ${FILENAME}" | sha256sum -c -` enforces cryptographic
-#   verification prior to running tar/unzip commands.
+# Stage: flutter-sdk — fetch + prune the Flutter stable SDK
 # -----------------------------------------------------------------------------
-RUN set -euo pipefail && \
-    source /tmp/versions.lock && \
-    \
-    # -------------------------------------------------------------------------
-    # 1. ripgrep
-    # -------------------------------------------------------------------------
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        RG_ASSET="$RIPGREP_ASSET_AMD64"; RG_SHA="$RIPGREP_SHA256_AMD64"; \
-    else \
-        RG_ASSET="$RIPGREP_ASSET_ARM64"; RG_SHA="$RIPGREP_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o ripgrep.tar.gz "$RG_ASSET" && \
-    echo "${RG_SHA}  ripgrep.tar.gz" | sha256sum -c - && \
-    mkdir -p /tmp/rg && tar -xzf ripgrep.tar.gz -C /tmp/rg --strip-components=1 && \
-    mv /tmp/rg/rg /usr/local/bin/rg && \
-    chmod 0755 /usr/local/bin/rg && \
-    \
-    # -------------------------------------------------------------------------
-    # 2. fd-find
-    # -------------------------------------------------------------------------
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        FD_ASSET_URL="$FD_ASSET_AMD64"; FD_SHA="$FD_SHA256_AMD64"; \
-    else \
-        FD_ASSET_URL="$FD_ASSET_ARM64"; FD_SHA="$FD_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o fd.tar.gz "$FD_ASSET_URL" && \
-    echo "${FD_SHA}  fd.tar.gz" | sha256sum -c - && \
-    mkdir -p /tmp/fd && tar -xzf fd.tar.gz -C /tmp/fd --strip-components=1 && \
-    mv /tmp/fd/fd /usr/local/bin/fd && \
-    chmod 0755 /usr/local/bin/fd && \
-    \
-    # -------------------------------------------------------------------------
-    # 3. bat
-    # -------------------------------------------------------------------------
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        BAT_ASSET_URL="$BAT_ASSET_AMD64"; BAT_SHA="$BAT_SHA256_AMD64"; \
-    else \
-        BAT_ASSET_URL="$BAT_ASSET_ARM64"; BAT_SHA="$BAT_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o bat.tar.gz "$BAT_ASSET_URL" && \
-    echo "${BAT_SHA}  bat.tar.gz" | sha256sum -c - && \
-    mkdir -p /tmp/bat && tar -xzf bat.tar.gz -C /tmp/bat --strip-components=1 && \
-    mv /tmp/bat/bat /usr/local/bin/bat && \
-    chmod 0755 /usr/local/bin/bat && \
-    \
-    # -------------------------------------------------------------------------
-    # 4. eza
-    # -------------------------------------------------------------------------
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        EZA_ASSET_URL="$EZA_ASSET_AMD64"; EZA_SHA="$EZA_SHA256_AMD64"; \
-    else \
-        EZA_ASSET_URL="$EZA_ASSET_ARM64"; EZA_SHA="$EZA_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o eza.tar.gz "$EZA_ASSET_URL" && \
-    echo "${EZA_SHA}  eza.tar.gz" | sha256sum -c - && \
-    mkdir -p /tmp/eza && tar -xzf eza.tar.gz -C /tmp/eza && \
-    mv /tmp/eza/eza /usr/local/bin/eza && \
-    chmod 0755 /usr/local/bin/eza && \
-    \
-    # -------------------------------------------------------------------------
-    # 5. go-task
-    # -------------------------------------------------------------------------
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        TASK_ASSET_URL="$TASK_ASSET_AMD64"; TASK_SHA="$TASK_SHA256_AMD64"; \
-    else \
-        TASK_ASSET_URL="$TASK_ASSET_ARM64"; TASK_SHA="$TASK_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o task.tar.gz "$TASK_ASSET_URL" && \
-    echo "${TASK_SHA}  task.tar.gz" | sha256sum -c - && \
-    mkdir -p /tmp/task && tar -xzf task.tar.gz -C /tmp/task && \
-    mv /tmp/task/task /usr/local/bin/task && \
-    chmod 0755 /usr/local/bin/task && \
-    \
-    # -------------------------------------------------------------------------
-    # 6. yq
-    # -------------------------------------------------------------------------
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        YQ_ASSET_URL="$YQ_ASSET_AMD64"; YQ_SHA="$YQ_SHA256_AMD64"; \
-    else \
-        YQ_ASSET_URL="$YQ_ASSET_ARM64"; YQ_SHA="$YQ_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o /usr/local/bin/yq "$YQ_ASSET_URL" && \
-    echo "${YQ_SHA}  /usr/local/bin/yq" | sha256sum -c - && \
-    chmod 0755 /usr/local/bin/yq
-
-# =============================================================================
-# Stage 2: Flutter SDK Builder
-# =============================================================================
 FROM ubuntu:${UBUNTU_VERSION} AS flutter-sdk
-
 ARG TARGETARCH
-ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    git \
-    tar \
-    xz-utils \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl xz-utils git && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY config/versions.lock /tmp/versions.lock
+# Version data comes exclusively from config/versions.lock (generated by
+# config/resolve.sh outside of Docker). This stage never executes resolve.sh
+# and never re-derives a version on its own.
+COPY config/versions.lock /tmp/baobab-config/versions.lock
+
+# Flutter's officially distributed pre-built SDK bundle is x64-only — its
+# release manifest (storage.googleapis.com/flutter_infra_release/releases/
+# releases_linux.json) has never published a separate archive for any other
+# architecture; the filename is simply flutter_linux_<version>-stable.tar.xz,
+# with no arch segment. There is no equivalent pre-built tarball for Linux
+# ARM64 hosts to point at.
+#
+# Per Flutter's own guidance for ARM64 Linux hosts (Raspberry Pi, Ampere
+# Altra, Apple Silicon Linux VMs, GitHub's ubuntu-*-arm runners, etc.), the
+# supported path there is different: fetch the flutter/flutter repository
+# directly. The `flutter` tool detects the host architecture itself and
+# fetches the matching engine/Dart SDK artifacts on first invocation
+# (triggered later, in the final stage's `flutter precache` step) — so no
+# manual per-arch URL construction is needed or possible for arm64.
+#
+# Shallow Fetch Mechanics & Tag Collisions (ARM64):
+# 1. Past Flutter releases have shipped branches with the exact same name as
+#    their release tags (see https://github.com/flutter/flutter/issues/104901).
+#    Using `git clone --branch <version>` can silently resolve to the branch
+#    instead of the tag, leaving `flutter --version` reporting "0.0.0-unknown".
+# 2. Flutter release tags are annotated Git tags (pointing to a tag object,
+#    which in turn points to a commit object). Performing a shallow fetch
+#    (`--depth 1`) with an explicit refspec mapping like `refs/tags/V:refs/tags/V`
+#    fetches only the raw tag object without dereferencing the underlying
+#    commit, causing subsequent `git checkout` calls to fail with
+#    "fatal: reference is not a tree".
+#
+# To resolve both constraints cleanly:
+# We invoke `git fetch --depth 1 origin tag "${FLUTTER_VERSION}"`. Explicitly
+# using the `tag` specifier prevents collision with same-named branches, while
+# Git automatically dereferences the annotated tag and fetches its target
+# commit into FETCH_HEAD. Checking out FETCH_HEAD and pointing a local tag to
+# it gives `flutter` a complete 1-commit version history without error.
+RUN set -euo pipefail; \
+    . /tmp/baobab-config/versions.lock; \
+    mkdir -p /opt/flutter-tmp; \
+    case "${TARGETARCH}" in \
+      amd64) \
+        curl -fsSL -o /tmp/flutter.tar.xz \
+          "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"; \
+        tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-tmp --strip-components=1; \
+        rm -f /tmp/flutter.tar.xz; \
+        # .git MUST be kept so flutter precache can resolve the engine commit revision.
+        rm -rf /opt/flutter-tmp/packages/flutter/doc \
+        ;; \
+      arm64) \
+        git init -q /opt/flutter-tmp; \
+        git -C /opt/flutter-tmp remote add origin https://github.com/flutter/flutter.git; \
+        git -C /opt/flutter-tmp fetch --depth 1 origin tag "${FLUTTER_VERSION}"; \
+        git -C /opt/flutter-tmp checkout -q FETCH_HEAD; \
+        git -C /opt/flutter-tmp tag -f "${FLUTTER_VERSION}" FETCH_HEAD; \
+        # .git MUST be kept here — the flutter tool reads git metadata on arm64
+        # to resolve its own version and channel state. Docs are safe to drop.
+        rm -rf /opt/flutter-tmp/packages/flutter/doc \
+        ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac
+
 
 # -----------------------------------------------------------------------------
-# Flutter SDK Download & SHA256 Verification
-# RATIONALE: Flutter SDK tarballs are downloaded from Google storage buckets.
-# Validating the archive checksum before extracting into /opt/flutter prevents
-# partial download corruption and supply chain tampering.
+# Stage: cli-tools — fetch pinned Rust/Go CLI utilities from GitHub Releases
 # -----------------------------------------------------------------------------
-RUN set -euo pipefail && \
-    source /tmp/versions.lock && \
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        FLUTTER_URL="$FLUTTER_ASSET_AMD64"; FLUTTER_SHA="$FLUTTER_SHA256_AMD64"; \
-    else \
-        FLUTTER_URL="$FLUTTER_ASSET_ARM64"; FLUTTER_SHA="$FLUTTER_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o /tmp/flutter.tar.xz "$FLUTTER_URL" && \
-    echo "${FLUTTER_SHA}  /tmp/flutter.tar.xz" | sha256sum -c - && \
-    mkdir -p /opt/flutter && \
-    tar -xJf /tmp/flutter.tar.xz -C /opt && \
-    rm /tmp/flutter.tar.xz && \
-    git config --global --add safe.directory /opt/flutter
-
-# =============================================================================
-# Stage 3: Python Toolchain Builder (uv & Poetry)
-# =============================================================================
-FROM ubuntu:${UBUNTU_VERSION} AS python-tools
-
+# Ubuntu's own package versions for these tools drift release to release and
+# are sometimes missing on brand-new LTS series before universe catches up.
+# Pinning to upstream GitHub release tarballs keeps every BAOBAB engineer on
+# byte-identical tool versions regardless of the base image's apt state.
+FROM ubuntu:${UBUNTU_VERSION} AS cli-tools
 ARG TARGETARCH
-ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    tar \
-    gzip \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl tar && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY config/versions.lock /tmp/versions.lock
+# Version data comes exclusively from config/versions.lock (generated by
+# config/resolve.sh outside of Docker). This stage never executes resolve.sh
+# and never re-derives a version on its own.
+COPY config/versions.lock /tmp/baobab-config/versions.lock
+
+WORKDIR /tmp/cli-tools
+RUN set -euo pipefail; \
+    . /tmp/baobab-config/versions.lock; \
+    case "${TARGETARCH}" in \
+      amd64) RG_ARCH="x86_64-unknown-linux-musl"; FD_ARCH="x86_64-unknown-linux-musl"; \
+             BAT_ARCH="x86_64-unknown-linux-musl"; EZA_ARCH="x86_64-unknown-linux-gnu" ;; \
+      arm64) RG_ARCH="aarch64-unknown-linux-gnu"; FD_ARCH="aarch64-unknown-linux-gnu"; \
+             BAT_ARCH="aarch64-unknown-linux-gnu"; EZA_ARCH="aarch64-unknown-linux-gnu" ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    mkdir -p /opt/cli-tools/bin; \
+    # ripgrep
+    curl -fsSL -o rg.tar.gz "https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/ripgrep-${RIPGREP_VERSION}-${RG_ARCH}.tar.gz"; \
+    tar -xzf rg.tar.gz --strip-components=1 -C /tmp "*/rg" 2>/dev/null || tar -xzf rg.tar.gz --strip-components=1 -C /tmp; \
+    find /tmp -maxdepth 1 -name rg -exec cp {} /opt/cli-tools/bin/rg \; ; \
+    # fd
+    curl -fsSL -o fd.tar.gz "https://github.com/sharkdp/fd/releases/download/v${FD_VERSION}/fd-v${FD_VERSION}-${FD_ARCH}.tar.gz"; \
+    tar -xzf fd.tar.gz --strip-components=1 -C /tmp; \
+    cp /tmp/fd /opt/cli-tools/bin/fd; \
+    # bat
+    curl -fsSL -o bat.tar.gz "https://github.com/sharkdp/bat/releases/download/v${BAT_VERSION}/bat-v${BAT_VERSION}-${BAT_ARCH}.tar.gz"; \
+    tar -xzf bat.tar.gz --strip-components=1 -C /tmp; \
+    cp /tmp/bat /opt/cli-tools/bin/bat; \
+    # eza
+    curl -fsSL -o eza.tar.gz "https://github.com/eza-community/eza/releases/download/v${EZA_VERSION}/eza_${EZA_ARCH}.tar.gz"; \
+    tar -xzf eza.tar.gz -C /opt/cli-tools/bin; \
+    chmod +x /opt/cli-tools/bin/*; \
+    rm -rf /tmp/*
 
 # -----------------------------------------------------------------------------
-# uv & Poetry Binary Checksum Verification
+# Stage: final — the actual dev container image
 # -----------------------------------------------------------------------------
-RUN set -euo pipefail && \
-    source /tmp/versions.lock && \
-    # Install uv with SHA256 verification
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        UV_URL="$UV_ASSET_AMD64"; UV_SHA="$UV_SHA256_AMD64"; \
-    else \
-        UV_URL="$UV_ASSET_ARM64"; UV_SHA="$UV_SHA256_ARM64"; \
-    fi && \
-    curl -fsSL -o /tmp/uv.tar.gz "$UV_URL" && \
-    echo "${UV_SHA}  /tmp/uv.tar.gz" | sha256sum -c - && \
-    mkdir -p /tmp/uv && tar -xzf /tmp/uv.tar.gz -C /tmp/uv --strip-components=1 && \
-    mv /tmp/uv/uv /tmp/uv/uvx /usr/local/bin/ && \
-    chmod 0755 /usr/local/bin/uv /usr/local/bin/uvx && \
-    rm -rf /tmp/uv*
-
-# =============================================================================
-# Stage 4: Final Production DevContainer Base Image
-# =============================================================================
 FROM ubuntu:${UBUNTU_VERSION} AS final
 
-# Standard metadata labels required for container governance
-ARG VERSION=dev
+ARG TARGETARCH
+# Build metadata supplied by GitHub Actions
 ARG BUILD_DATE
+ARG VERSION
 ARG REVISION
 
-LABEL org.opencontainers.image.title="BAOBAB Dev Container" \
-      org.opencontainers.image.description="Enterprise Standard Development Container" \
+LABEL org.opencontainers.image.title="baobab-dev" \
+      org.opencontainers.image.description="Standard development container for the BAOBAB Enterprise Platform (Nabhold Group Africa)" \
       org.opencontainers.image.vendor="Nabhold Group Africa" \
-      org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.revision="${REVISION}"
+      org.opencontainers.image.source="https://github.com/nabhold/baobab-devcontainer" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.version=$VERSION \
+      org.opencontainers.image.revision=$REVISION \
+      org.opencontainers.image.authors="Platform Engineering <platform@nabhold.com>" \
+      org.opencontainers.image.documentation="https://github.com/nabhold/baobab-devcontainer/blob/main/README.md"
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8 \
-    PATH="/opt/flutter/bin:/home/vscode/.local/bin:${PATH}"
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
+    TZ=UTC
 
-# Install core runtime dependencies (APT packages locked by Ubuntu release point)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo \
-    git \
-    openssh-client \
-    ca-certificates \
-    gnupg \
-    curl \
-    wget \
-    unzip \
-    jq \
-    python3 \
-    python3-pip \
-    python3-venv \
-    nodejs \
-    npm \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Copy validated binaries from builder stages
-COPY --from=cli-tools /usr/local/bin/rg /usr/local/bin/rg
-COPY --from=cli-tools /usr/local/bin/fd /usr/local/bin/fd
-COPY --from=cli-tools /usr/local/bin/bat /usr/local/bin/bat
-COPY --from=cli-tools /usr/local/bin/eza /usr/local/bin/eza
-COPY --from=cli-tools /usr/local/bin/task /usr/local/bin/task
-COPY --from=cli-tools /usr/local/bin/yq /usr/local/bin/yq
-COPY --from=flutter-sdk /opt/flutter /opt/flutter
-COPY --from=python-tools /usr/local/bin/uv /usr/local/bin/uv
-COPY --from=python-tools /usr/local/bin/uvx /usr/local/bin/uvx
+# -----------------------------------------------------------------------------
+# 1. Core system packages, locale, timezone
+# -----------------------------------------------------------------------------
+# Ubuntu's default apt config (docker-clean) deletes downloaded .deb files
+# and the apt lists cache immediately after every apt-get invocation, which
+# defeats BuildKit's --mount=type=cache for /var/cache/apt and /var/lib/apt
+# below. Removing it (and telling apt to keep downloaded packages) lets
+# those cache mounts actually persist package downloads across rebuilds.
+RUN rm -f /etc/apt/apt.conf.d/docker-clean; \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 
-# Create non-root vscode user with passwordless sudo access for DevContainers
-RUN groupadd --gid 1000 vscode \
-    && useradd --uid 1000 --gid 1000 -m -s /bin/bash vscode \
-    && echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode \
-    && chmod 0440 /etc/sudoers.d/vscode \
-    && chown -R vscode:vscode /opt/flutter
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      sudo curl wget git unzip zip tar jq tree nano vim less htop procps \
+      ca-certificates gnupg software-properties-common build-essential \
+      pkg-config locales tzdata xz-utils apt-transport-https \
+      openssh-client dnsutils iproute2 \
+    && \
+    locale-gen en_US.UTF-8 && \
+    update-locale LANG=en_US.UTF-8 LANGUAGE=en_US:en && \
+    ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
 
-# Copy helper management scripts
+# -----------------------------------------------------------------------------
+# 2. BAOBAB runtime configuration layout
+#
+# config/versions.lock is the single, deterministic source of truth for every
+# tool version installed below. It is generated OUTSIDE of this Dockerfile by
+# config/resolve.sh (never executed during `docker build`) and is installed
+# here, permanently, under /usr/local/share/baobab/config so that:
+#   - the RUN layers further down in THIS stage can source it to pick up
+#     pinned versions (Python, Node.js, PostgreSQL, ...);
+#   - baobab-verify / baobab-summary / baobab-bootstrap / baobab-post-create
+#     can read it at container runtime via $BAOBAB_CONFIG_DIR, exactly as
+#     they do outside the image.
+#
+# config/resolve.sh itself is installed alongside it for reference/tooling
+# parity (e.g. re-running version resolution from inside a running
+# container), but is never invoked as part of this build.
+# -----------------------------------------------------------------------------
+RUN mkdir -p /usr/local/share/baobab/config
+
+COPY config/versions.yaml /usr/local/share/baobab/config/versions.yaml
+COPY config/versions.lock /usr/local/share/baobab/config/versions.lock
+COPY --chmod=0755 config/resolve.sh /usr/local/share/baobab/config/resolve.sh
+
+ENV BAOBAB_CONFIG_DIR=/usr/local/share/baobab/config
+
+# -----------------------------------------------------------------------------
+# 3. Python toolchain. The minor version (e.g. "3.14") is derived from
+#    versions.lock's full PYTHON_VERSION (e.g. "3.14.6") since apt package
+#    names use major.minor only.
+#
+# deadsnakes is added conditionally, not unconditionally: some deadsnakes
+# releases deliberately omit the Ubuntu base image's own native default
+# Python version, since it's already available from Ubuntu's own archives
+# (e.g. Python 3.10 on jammy, 3.12 on noble, 3.14 on resolute are all
+# excluded from deadsnakes for exactly this reason — see
+# https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa). Unconditionally
+# adding the PPA and expecting it to always have the pinned version breaks
+# whenever versions.lock happens to pin the same version the base image
+# already ships. Probing `apt-cache show` against the base archives first,
+# before deciding whether to add the PPA, keeps this correct regardless of
+# whether the pin matches the base image's native version or diverges from
+# it — without hard-coding today's specific version/codename pairing.
+#
+# pip is deliberately bootstrapped via get-pip.py on fallback paths rather
+# than apt's python3-pip when deadsnakes is used, ensuring unrestricted pip
+# functionality across different base OS versions.
+# -----------------------------------------------------------------------------
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
+    PYTHON_MINOR="${PYTHON_VERSION%.*}" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates software-properties-common && \
+    if apt-cache show "python${PYTHON_MINOR}" >/dev/null 2>&1 || apt-cache show python3 >/dev/null 2>&1; then \
+        apt-get install -y --no-install-recommends \
+            python3 \
+            python3-venv \
+            python3-dev \
+            python3-pip; \
+    else \
+        add-apt-repository -y ppa:deadsnakes/ppa && \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            "python${PYTHON_MINOR}" \
+            "python${PYTHON_MINOR}-venv" \
+            "python${PYTHON_MINOR}-dev" && \
+        curl -fsSL https://bootstrap.pypa.io/get-pip.py | "python${PYTHON_MINOR}" - --no-cache-dir --break-system-packages; \
+    fi && \
+    update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${PYTHON_MINOR}" 1 || true && \
+    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1 && \
+    update-alternatives --install /usr/bin/python3.14 python3.14 /usr/bin/python3 1
+
+# pipx, uv, Poetry — installed once, globally, then made available to every
+# user via /usr/local so Codespaces prebuilds and post-create scripts share
+# a single toolchain install.
+ENV PIPX_HOME=/usr/local/pipx \
+    PIPX_BIN_DIR=/usr/local/bin
+RUN python3 -m pip install --no-cache-dir --break-system-packages pipx && \
+    python3 -m pipx ensurepath && \
+    pipx install --global poetry && \
+    pipx install --global uv && \
+    chmod -R a+rX /usr/local/pipx
+
+# django-tenants and the rest of the BAOBAB application dependencies are
+# intentionally NOT baked in here — they belong to the project's own
+# pyproject.toml / poetry.lock and are installed by post-create.sh on
+# container creation, keeping this base image framework-version-agnostic.
+# -----------------------------------------------------------------------------
+# 4. Node.js LTS, npm, pnpm, yarn
+# -----------------------------------------------------------------------------
+# NodeSource's own setup_${NODE_MAJOR}.x script (curl | bash) does nothing
+# more than add their GPG key and an apt source entry — the same shape as
+# the Docker CLI, GitHub CLI, and PostgreSQL setup blocks elsewhere in this
+# stage. Piping a remote script into bash is one of the few places in this
+# file that executed arbitrary remote code sight-unseen rather than adding
+# a package source the same explicit way everything else here does, so it's
+# replaced with the manual equivalent NodeSource itself documents at
+# https://github.com/nodesource/distributions/wiki/Repository-Manual-Installation.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    chmod a+r /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] \
+https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends nodejs && \
+    corepack enable && \
+    corepack prepare pnpm@latest --activate && \
+    corepack prepare yarn@stable --activate
+
+# -----------------------------------------------------------------------------
+# 5. Flutter + Dart (copied from the flutter-sdk builder stage)
+# -----------------------------------------------------------------------------
+COPY --from=flutter-sdk /opt/flutter-tmp /opt/flutter
+ENV PUB_CACHE=/opt/flutter/.pub-cache
+
+# Pre-fetch platform-independent Flutter/Dart artifacts so first-run inside
+# Codespaces (`flutter doctor`, `flutter pub get`) is fast and works offline
+# for anything that doesn't need Android/iOS toolchains (mobile SDKs are
+# intentionally excluded from this image — see README "What's NOT included").
+#
+# Git Safe Directory Scope & Multi-User Context:
+# Running `git config --global` during image construction writes directives
+# exclusively to `/root/.gitconfig`. When non-root container runtimes (such
+# as the default `vscode` user or runtime healthcheck processes) execute `flutter`
+# or `dart` commands later, Git ignores `/root/.gitconfig`. Because `/opt/flutter`
+# retains `.git` metadata (required on ARM64 for Flutter to query its own version
+# and release channel), Git flags `/opt/flutter` with a "fatal: detected dubious
+# ownership" error for any actor other than `root`.
+#
+# Configuring `safe.directory` at the system level (`git config --system`, stored in
+# `/etc/gitconfig`) guarantees that both `root` during remaining build stages and
+# unprivileged runtime users inherit trusted access to `/opt/flutter` seamlessly.
+#
+# Invoked via absolute path rather than relying on PATH: PATH is defined
+# exactly once, in its final complete form, in section 11 below — Flutter
+# isn't on it yet at this point in the build.
+RUN git config --system --add safe.directory /opt/flutter && \
+    /opt/flutter/bin/flutter config --no-analytics --no-cli-animations && \
+    /opt/flutter/bin/flutter precache --universal --no-android --no-ios --no-fuchsia && \
+    chmod -R a+rX /opt/flutter
+
+# -----------------------------------------------------------------------------
+# 6. PostgreSQL client + Redis CLI (client tools only — no server daemons)
+# -----------------------------------------------------------------------------
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
+    install -d /usr/share/postgresql-common/pgdg && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc && \
+    echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      postgresql-client-${POSTGRES_MAJOR} \
+      redis-tools
+
+# -----------------------------------------------------------------------------
+# 7. Docker CLI + Compose plugin (client only — Codespaces mounts the host
+#    Docker socket, so no dockerd/containerd is installed in this image)
+# -----------------------------------------------------------------------------
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    ARCH=$(dpkg --print-architecture) && \
+    echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] \
+https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+      > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      docker-ce-cli \
+      docker-compose-plugin \
+      docker-buildx-plugin
+
+# -----------------------------------------------------------------------------
+# 8. GitHub CLI
+# -----------------------------------------------------------------------------
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    ARCH=$(dpkg --print-architecture) && \
+    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
+https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gh
+
+# -----------------------------------------------------------------------------
+# 9. Shell productivity utilities
+#    fzf and tmux come from Ubuntu's own repos (small, stable, low-churn).
+#    ripgrep/fd/bat/eza are copied pre-built from the cli-tools builder stage
+#    for pinned, reproducible versions across Ubuntu releases.
+# -----------------------------------------------------------------------------
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends fzf tmux bash-completion
+
+COPY --from=cli-tools /opt/cli-tools/bin/rg  /usr/local/bin/rg
+COPY --from=cli-tools /opt/cli-tools/bin/fd  /usr/local/bin/fd
+COPY --from=cli-tools /opt/cli-tools/bin/bat /usr/local/bin/bat
+COPY --from=cli-tools /opt/cli-tools/bin/eza /usr/local/bin/eza
+RUN chmod +x /usr/local/bin/rg /usr/local/bin/fd /usr/local/bin/bat /usr/local/bin/eza
+
+# -----------------------------------------------------------------------------
+# 10. Non-root user creation (vscode:1000)
+# -----------------------------------------------------------------------------
+# Ubuntu 24.04/26.04 base images ship with a default 'ubuntu' user (UID/GID 1000).
+# Remove it first to free up UID/GID 1000 for 'vscode', avoiding exit code 4.
+RUN if id "ubuntu" &>/dev/null; then userdel -r ubuntu; fi && \
+    if getent group ubuntu &>/dev/null; then groupdel ubuntu; fi && \
+    groupadd --gid 1000 vscode && \
+    useradd --uid 1000 --gid 1000 --shell /bin/bash --create-home vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode && \
+    chmod 0440 /etc/sudoers.d/vscode && \
+    mkdir -p /workspaces /home/vscode/.local/bin && \
+    chown -R vscode:vscode /workspaces /home/vscode
+
+
+# -----------------------------------------------------------------------------
+# 11. Global environment configuration
+# -----------------------------------------------------------------------------
+ENV PATH="/home/vscode/.local/bin:/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:/usr/local/bin:${PATH}" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    BAOBAB_IMAGE_VERSION=${VERSION} \
+    BAOBAB_BUILD_DATE=${BUILD_DATE} \
+    BAOBAB_GIT_REVISION=${REVISION}
+
+# Give the vscode user ownership of the entire Flutter SDK (not just the
+# pub-cache) so `flutter`/`dart` can update internal lockfiles, engine
+# caches, and version state without needing sudo at runtime.
+RUN chown -R vscode:vscode /opt/flutter
+
+# -----------------------------------------------------------------------------
+# 12. Shell enhancements: completions, aliases, colored prompt, history
+# -----------------------------------------------------------------------------
+COPY --chown=vscode:vscode config/bashrc.d/ /etc/bashrc.d/
+RUN echo '\n# BAOBAB devcontainer shell enhancements\nfor f in /etc/bashrc.d/*.sh; do [ -r "$f" ] && . "$f"; done' \
+      >> /etc/bash.bashrc
+
+# -----------------------------------------------------------------------------
+# 13. Install BAOBAB helper commands (used by devcontainer lifecycle hooks and
+#     by engineers troubleshooting a container directly). Each command simply
+#     executes its corresponding script from scripts/.
+# -----------------------------------------------------------------------------
 COPY --chmod=0755 scripts/bootstrap.sh    /usr/local/bin/baobab-bootstrap
 COPY --chmod=0755 scripts/post-create.sh  /usr/local/bin/baobab-post-create
 COPY --chmod=0755 scripts/summary.sh      /usr/local/bin/baobab-summary
@@ -284,13 +514,21 @@ COPY --chmod=0755 scripts/verify.sh       /usr/local/bin/baobab-verify
 USER vscode
 WORKDIR /workspaces
 
+# Poetry: create venvs inside each project directory rather than a shared
+# cache, matching the objective and keeping per-tenant-app envs isolated.
+RUN poetry config virtualenvs.in-project true
+
 # -----------------------------------------------------------------------------
-# Build-time Runtime Verification Gate
-# RATIONALE: Executes `baobab-verify` as the non-root user inside the image build.
-# If any tool fails to execute or returns an invalid version string, the Docker
-# build fails immediately rather than shipping a broken container image.
+# 14. Build-time verification
+#
+# Fail the image build itself if the toolchain isn't in the state baobab-
+# verify expects (correct versions on PATH, correct user/UID/GID, passwordless
+# sudo, etc.) rather than shipping a broken image and discovering it later.
+# Runs as `vscode`, after the USER switch above, since baobab-verify checks
+# the runtime user identity.
 # -----------------------------------------------------------------------------
-RUN baobab-verify
+
+RUN baobab-verify 
 
 HEALTHCHECK \
     --interval=60s \
@@ -298,3 +536,5 @@ HEALTHCHECK \
     --start-period=15s \
     --retries=3 \
     CMD baobab-verify || exit 1
+
+CMD ["sleep", "infinity"]
