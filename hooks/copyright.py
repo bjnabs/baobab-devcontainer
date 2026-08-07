@@ -9,7 +9,7 @@ This is plain MkDocs core "hooks" functionality (config.hooks, supported
 since MkDocs 1.4) — a plugin-style Python module referenced directly from
 mkdocs.yml's top-level `hooks:` list, requiring no additional package.
 
-mkdocs.yml must contain the literal placeholder, e.g.:
+zensical.toml must contain the literal placeholder, e.g.:
 
     copyright: >-
       Copyright &copy; {year} Nabhold.

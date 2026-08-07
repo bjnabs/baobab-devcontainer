@@ -5,7 +5,7 @@
 #
 # Purpose
 # -------
-# Builds the BAOBAB documentation using MkDocs and deploys the generated
+# Builds the BAOBAB documentation using Zensical and deploys the generated
 # static site to GitHub Pages.
 #
 # This workflow is intentionally limited to documentation deployment and does
@@ -50,7 +50,7 @@ on:
       - "docs/**"
 
       # Site configuration
-      - "mkdocs.yml"
+      - "zensical.toml"
 
       # Python dependencies
       - "pyproject.toml"
@@ -65,7 +65,7 @@ on:
 
     paths:
       - "docs/**"
-      - "mkdocs.yml"
+      - "zensical.toml"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/pages.yml"
@@ -174,18 +174,10 @@ jobs:
 
       # ------------------------------------------------------------------------
       # Build documentation
-      #
-      # --strict
-      #     Treat warnings as errors.
-      #
-      # --verbose
-      #     Produce detailed logs to simplify troubleshooting.
       # ------------------------------------------------------------------------
       - name: Build documentation
         run: |
-          uv run mkdocs build \
-            --strict \
-            --verbose
+          uv run zensical build --clean
 
       # ------------------------------------------------------------------------
       # Upload generated static site
