@@ -18,6 +18,14 @@
 #
 # 3. Supply Chain Hardening: All GitHub Actions are pinned to full 40-character
 #    commit SHAs to eliminate risks from hijacked or modified release tags.
+#
+# CHANGE LOG (this file, most recent first)
+# ------------------------------------------------------------------------------
+# * peter-evans/create-pull-request was pinned to a SHA that does not
+#   correspond to v6.1.0 (or to any tag on this repository) — live-verified
+#   (2026-08-06) via `git ls-remote` against the upstream repo. Corrected to
+#   the real v6.1.0 commit. actions/checkout's existing pin was checked at
+#   the same time and is correct; left unchanged.
 # ==============================================================================
 
 name: Scheduled Lockfile Update
@@ -103,7 +111,7 @@ jobs:
       # - If no changes are detected, this step gracefully no-ops without error.
       # ------------------------------------------------------------------------
       - name: Open Pull Request if lockfile drift exists
-        uses: peter-evans/create-pull-request@c5a029f1ef0021a8d0092dd9d18005370258d4a9 # v6.1.0
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore(deps): weekly update of versions.lock and .python-version"

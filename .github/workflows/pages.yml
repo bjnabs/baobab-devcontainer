@@ -27,6 +27,15 @@
 # ------
 # GitHub Pages
 #
+# CHANGE LOG (this file, most recent first)
+# ------------------------------------------------------------------------------
+# * All five actions used in this file were unpinned (floating major-version
+#   tags only: @v5, @v6, @v4). Pinned to full 40-character commit SHAs,
+#   live-verified against each upstream repository (2026-08-06), to satisfy
+#   the org-wide "Require actions to be pinned to a full-length commit SHA"
+#   policy and bring this file in line with publish.yml/update-lockfile.yml,
+#   where 9 of 11 existing pins were separately found to be incorrect and
+#   have already been corrected.
 # ==============================================================================
 
 name: Deploy Documentation
@@ -113,7 +122,7 @@ jobs:
       # today's date rather than its real last-modified date).
       # ------------------------------------------------------------------------
       - name: Checkout source
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
@@ -152,7 +161,7 @@ jobs:
       # step used to claim in a comment here.
       # ------------------------------------------------------------------------
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
         with:
           enable-cache: true
 
@@ -186,7 +195,7 @@ jobs:
       # preview) and does not publish anything on its own.
       # ------------------------------------------------------------------------
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
           path: site
 
@@ -220,11 +229,11 @@ jobs:
       # Configure GitHub Pages
       # ------------------------------------------------------------------------
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
 
       # ------------------------------------------------------------------------
       # Deploy
       # ------------------------------------------------------------------------
       - name: Deploy documentation
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
