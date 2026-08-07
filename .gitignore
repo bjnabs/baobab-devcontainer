@@ -138,6 +138,7 @@ temp/
 .cache/
 .tmp_scan_extra_css_usage.py
 .tmp_clean_extra_css.py
+.tmp_css_usage_candidates
 
 # ------------------------------------------------------------------------------
 # Archives

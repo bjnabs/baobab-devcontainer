@@ -48,6 +48,13 @@
 #     TARGETPLATFORM build args — no per-arch Dockerfiles.
 #   - Non-root: the final runtime user is `vscode` (UID/GID 1000) with
 #     passwordless sudo, matching the GitHub Codespaces convention.
+#   - Zero-Trust Binary Downloads: every binary fetched from outside a
+#     distribution's own signed package repository is verified against the
+#     exact SHA256 digest config/resolve.sh already computed for it, via
+#     `sha256sum -c`, before it is ever extracted or executed. A checksum
+#     resolve.sh computes but that nothing downstream verifies is not a
+#     security control — see the cli-tools and flutter-sdk stages below,
+#     where this is actually enforced.
 #
 # Cache-efficiency note on versions.lock:
 #   Every RUN layer that needs a pinned version sources config/versions.lock
@@ -61,6 +68,34 @@
 #   stage the blast radius of any single version bump is "that stage's
 #   version-consuming layers onward." This is an inherent trade-off of using
 #   one lock file with a minimal, fixed set of build ARGs, not an oversight.
+#
+# CHANGE LOG (this file, most recent first)
+# ------------------------------------------------------------------------------
+# * Wired up every checksum config/resolve.sh now computes, and actually
+#   enforces it: cli-tools and flutter-sdk previously downloaded ripgrep,
+#   fd, bat, eza, and Flutter's amd64 archive WITHOUT ever verifying the
+#   SHA256 resolve.sh already resolved for each — the checksum existed in
+#   versions.lock but nothing checked the downloaded bytes against it. Every
+#   download in both stages now runs through sha256sum -c before use.
+# * Added task, yq, uv, and cosign — resolved and checksummed by
+#   resolve.sh, but never actually installed anywhere in the image.
+# * gh moved from an unpinned apt install (cli.github.com's own repo, but
+#   always "whatever is latest at build time") to the same checksummed
+#   cli-tools binary pattern as the other GitHub-released tools — this is
+#   what versions.yaml's `github_cli.source: github` already declared;
+#   the apt install just never actually honored it.
+# * uv moved from `pipx install uv` (PyPI, unpinned to GH_VERSION-style
+#   determinism) to the same checksummed binary pattern, honoring its own
+#   `source: github` in versions.yaml.
+# * Poetry and pnpm were being installed completely unpinned
+#   (`pipx install poetry`, `corepack prepare pnpm@latest`) — both silently
+#   ignored POETRY_VERSION/PNPM_VERSION even after resolve.sh started
+#   resolving them. Both now pin to the exact resolved version.
+# * Flutter's arm64 build now fetches by the exact resolved commit
+#   (FLUTTER_GIT_REF) instead of by tag name — functionally similar to the
+#   previous tag-based fetch, but removes any dependency on git's tag/branch
+#   disambiguation entirely, since a raw commit fetch has no ref-name
+#   ambiguity to resolve in the first place.
 # =============================================================================
 
 # Base image tag, single source of truth for all three stages below. Has a
@@ -69,7 +104,7 @@
 ARG UBUNTU_VERSION=26.04
 
 # -----------------------------------------------------------------------------
-# Stage: flutter-sdk — fetch + prune the Flutter stable SDK
+# Stage: flutter-sdk — fetch + verify + prune the Flutter stable SDK
 # -----------------------------------------------------------------------------
 FROM ubuntu:${UBUNTU_VERSION} AS flutter-sdk
 ARG TARGETARCH
@@ -84,46 +119,46 @@ RUN apt-get update && \
 # and never re-derives a version on its own.
 COPY config/versions.lock /tmp/baobab-config/versions.lock
 
-# Flutter's officially distributed pre-built SDK bundle is x64-only — its
-# release manifest (storage.googleapis.com/flutter_infra_release/releases/
-# releases_linux.json) has never published a separate archive for any other
-# architecture; the filename is simply flutter_linux_<version>-stable.tar.xz,
-# with no arch segment. There is no equivalent pre-built tarball for Linux
-# ARM64 hosts to point at.
+# Flutter's officially distributed pre-built SDK bundle is x64-only —
+# live-verified against Flutter's own release manifest: every entry, at
+# every version, carries "dart_sdk_arch": "x64" and no arm64 archive exists
+# on any channel. There is no equivalent pre-built tarball for Linux ARM64
+# hosts to point at.
 #
 # Per Flutter's own guidance for ARM64 Linux hosts (Raspberry Pi, Ampere
 # Altra, Apple Silicon Linux VMs, GitHub's ubuntu-*-arm runners, etc.), the
 # supported path there is different: fetch the flutter/flutter repository
-# directly. The `flutter` tool detects the host architecture itself and
-# fetches the matching engine/Dart SDK artifacts on first invocation
-# (triggered later, in the final stage's `flutter precache` step) — so no
-# manual per-arch URL construction is needed or possible for arm64.
+# directly, at the exact commit config/resolve.sh already resolved
+# (FLUTTER_GIT_REF — the same commit hash Flutter's own release manifest
+# attributes to this stable version). The `flutter` tool detects the host
+# architecture itself and fetches the matching engine/Dart SDK artifacts on
+# first invocation (triggered later, in the final stage's `flutter precache`
+# step) — so no manual per-arch URL construction is needed or possible for
+# arm64.
 #
-# Shallow Fetch Mechanics & Tag Collisions (ARM64):
-# 1. Past Flutter releases have shipped branches with the exact same name as
-#    their release tags (see https://github.com/flutter/flutter/issues/104901).
-#    Using `git clone --branch <version>` can silently resolve to the branch
-#    instead of the tag, leaving `flutter --version` reporting "0.0.0-unknown".
-# 2. Flutter release tags are annotated Git tags (pointing to a tag object,
-#    which in turn points to a commit object). Performing a shallow fetch
-#    (`--depth 1`) with an explicit refspec mapping like `refs/tags/V:refs/tags/V`
-#    fetches only the raw tag object without dereferencing the underlying
-#    commit, causing subsequent `git checkout` calls to fail with
-#    "fatal: reference is not a tree".
+# Fetching by exact commit hash (rather than by tag name) is deliberate: it
+# sidesteps entirely the tag/branch-name collisions some past Flutter
+# releases have had (see
+# https://github.com/flutter/flutter/issues/104901) — a raw commit fetch has
+# no ref name to disambiguate in the first place, unlike `git fetch
+# <tag-name>`, which can silently resolve to a same-named branch instead of
+# the intended tag. GitHub supports fetching an arbitrary reachable commit
+# by its full SHA for public repositories, which is exactly what
+# FLUTTER_GIT_REF is.
 #
-# To resolve both constraints cleanly:
-# We invoke `git fetch --depth 1 origin tag "${FLUTTER_VERSION}"`. Explicitly
-# using the `tag` specifier prevents collision with same-named branches, while
-# Git automatically dereferences the annotated tag and fetches its target
-# commit into FETCH_HEAD. Checking out FETCH_HEAD and pointing a local tag to
-# it gives `flutter` a complete 1-commit version history without error.
+# amd64 gets the same zero-trust treatment as every other downloaded binary
+# in this Dockerfile: the tarball is verified against FLUTTER_SHA256_AMD64
+# via sha256sum -c before extraction. arm64 has no tarball to check a
+# SHA256 against — a git commit hash is the equivalent content-addressed
+# integrity guarantee there: cloning at this exact commit can only ever
+# produce this exact source tree.
 RUN set -euo pipefail; \
     . /tmp/baobab-config/versions.lock; \
     mkdir -p /opt/flutter-tmp; \
     case "${TARGETARCH}" in \
       amd64) \
-        curl -fsSL -o /tmp/flutter.tar.xz \
-          "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"; \
+        curl -fsSL -o /tmp/flutter.tar.xz "${FLUTTER_ARCHIVE_AMD64}"; \
+        echo "${FLUTTER_SHA256_AMD64}  /tmp/flutter.tar.xz" | sha256sum -c -; \
         tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-tmp --strip-components=1; \
         rm -f /tmp/flutter.tar.xz; \
         # .git MUST be kept so flutter precache can resolve the engine commit revision.
@@ -132,7 +167,7 @@ RUN set -euo pipefail; \
       arm64) \
         git init -q /opt/flutter-tmp; \
         git -C /opt/flutter-tmp remote add origin https://github.com/flutter/flutter.git; \
-        git -C /opt/flutter-tmp fetch --depth 1 origin tag "${FLUTTER_VERSION}"; \
+        git -C /opt/flutter-tmp fetch --depth 1 origin "${FLUTTER_GIT_REF}"; \
         git -C /opt/flutter-tmp checkout -q FETCH_HEAD; \
         git -C /opt/flutter-tmp tag -f "${FLUTTER_VERSION}" FETCH_HEAD; \
         # .git MUST be kept here — the flutter tool reads git metadata on arm64
@@ -144,12 +179,20 @@ RUN set -euo pipefail; \
 
 
 # -----------------------------------------------------------------------------
-# Stage: cli-tools — fetch pinned Rust/Go CLI utilities from GitHub Releases
+# Stage: cli-tools — fetch + verify pinned Rust/Go CLI utilities from GitHub
+# Releases
 # -----------------------------------------------------------------------------
 # Ubuntu's own package versions for these tools drift release to release and
 # are sometimes missing on brand-new LTS series before universe catches up.
 # Pinning to upstream GitHub release tarballs keeps every BAOBAB engineer on
 # byte-identical tool versions regardless of the base image's apt state.
+#
+# Every single asset fetched here is verified against the exact SHA256
+# config/resolve.sh already resolved for it (fetch_verify below) — this is
+# the actual enforcement point of "Zero-Trust Binary Downloads". Asset
+# filenames also come exclusively from versions.lock's *_ASSET_* variables,
+# not reconstructed inline, so a filename typo simply 404s at build time
+# instead of silently verifying against the wrong file.
 FROM ubuntu:${UBUNTU_VERSION} AS cli-tools
 ARG TARGETARCH
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -166,31 +209,87 @@ COPY config/versions.lock /tmp/baobab-config/versions.lock
 WORKDIR /tmp/cli-tools
 RUN set -euo pipefail; \
     . /tmp/baobab-config/versions.lock; \
+    mkdir -p /opt/cli-tools/bin; \
+    \
     case "${TARGETARCH}" in \
-      amd64) RG_ARCH="x86_64-unknown-linux-musl"; FD_ARCH="x86_64-unknown-linux-musl"; \
-             BAT_ARCH="x86_64-unknown-linux-musl"; EZA_ARCH="x86_64-unknown-linux-gnu" ;; \
-      arm64) RG_ARCH="aarch64-unknown-linux-gnu"; FD_ARCH="aarch64-unknown-linux-gnu"; \
-             BAT_ARCH="aarch64-unknown-linux-gnu"; EZA_ARCH="aarch64-unknown-linux-gnu" ;; \
+      amd64) ARCH_SUFFIX="AMD64" ;; \
+      arm64) ARCH_SUFFIX="ARM64" ;; \
       *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
-    mkdir -p /opt/cli-tools/bin; \
-    # ripgrep
-    curl -fsSL -o rg.tar.gz "https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/ripgrep-${RIPGREP_VERSION}-${RG_ARCH}.tar.gz"; \
-    tar -xzf rg.tar.gz --strip-components=1 -C /tmp "*/rg" 2>/dev/null || tar -xzf rg.tar.gz --strip-components=1 -C /tmp; \
-    find /tmp -maxdepth 1 -name rg -exec cp {} /opt/cli-tools/bin/rg \; ; \
-    # fd
-    curl -fsSL -o fd.tar.gz "https://github.com/sharkdp/fd/releases/download/v${FD_VERSION}/fd-v${FD_VERSION}-${FD_ARCH}.tar.gz"; \
-    tar -xzf fd.tar.gz --strip-components=1 -C /tmp; \
-    cp /tmp/fd /opt/cli-tools/bin/fd; \
-    # bat
-    curl -fsSL -o bat.tar.gz "https://github.com/sharkdp/bat/releases/download/v${BAT_VERSION}/bat-v${BAT_VERSION}-${BAT_ARCH}.tar.gz"; \
-    tar -xzf bat.tar.gz --strip-components=1 -C /tmp; \
-    cp /tmp/bat /opt/cli-tools/bin/bat; \
-    # eza
-    curl -fsSL -o eza.tar.gz "https://github.com/eza-community/eza/releases/download/v${EZA_VERSION}/eza_${EZA_ARCH}.tar.gz"; \
-    tar -xzf eza.tar.gz -C /opt/cli-tools/bin; \
+    \
+    # Downloads a single asset and verifies it against the SHA256 resolve.sh
+    # already resolved for it. Aborts the build on any mismatch — there is
+    # no "warn and continue" path for a failed integrity check.
+    fetch_verify() { \
+        local url="$1" asset="$2" sha256="$3"; \
+        curl -fsSL -o "${asset}" "${url}"; \
+        echo "${sha256}  ${asset}" | sha256sum -c -; \
+    }; \
+    \
+    # Extracts a single named binary out of a verified .tar.gz, regardless
+    # of how deeply nested it is inside the archive (upstream projects are
+    # inconsistent about this: some ship the binary at the archive root,
+    # others nest it under a versioned directory or a bin/ subdirectory).
+    # Installs the result directly under /opt/cli-tools/bin.
+    extract_binary() { \
+        local tarball="$1" binary_name="$2"; \
+        local dest="/opt/cli-tools/bin/${binary_name}"; \
+        local extract_dir; \
+        extract_dir="$(mktemp -d)"; \
+        tar -xzf "${tarball}" -C "${extract_dir}"; \
+        find "${extract_dir}" -type f -name "${binary_name}" -exec cp {} "${dest}" \; ; \
+        rm -rf "${extract_dir}"; \
+        [[ -f "${dest}" ]] || { echo "Failed to locate '${binary_name}' inside ${tarball}" >&2; exit 1; }; \
+    }; \
+    \
+    # ripgrep — tar.gz
+    RG_ASSET="RIPGREP_ASSET_${ARCH_SUFFIX}"; RG_SHA="RIPGREP_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/${!RG_ASSET}" "${!RG_ASSET}" "${!RG_SHA}"; \
+    extract_binary "${!RG_ASSET}" rg; \
+    \
+    # fd — tar.gz
+    FD_ASSET="FD_ASSET_${ARCH_SUFFIX}"; FD_SHA="FD_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/sharkdp/fd/releases/download/v${FD_VERSION}/${!FD_ASSET}" "${!FD_ASSET}" "${!FD_SHA}"; \
+    extract_binary "${!FD_ASSET}" fd; \
+    \
+    # bat — tar.gz
+    BAT_ASSET="BAT_ASSET_${ARCH_SUFFIX}"; BAT_SHA="BAT_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/sharkdp/bat/releases/download/v${BAT_VERSION}/${!BAT_ASSET}" "${!BAT_ASSET}" "${!BAT_SHA}"; \
+    extract_binary "${!BAT_ASSET}" bat; \
+    \
+    # eza — tar.gz
+    EZA_ASSET="EZA_ASSET_${ARCH_SUFFIX}"; EZA_SHA="EZA_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/eza-community/eza/releases/download/v${EZA_VERSION}/${!EZA_ASSET}" "${!EZA_ASSET}" "${!EZA_SHA}"; \
+    extract_binary "${!EZA_ASSET}" eza; \
+    \
+    # task — tar.gz
+    TASK_ASSET="TASK_ASSET_${ARCH_SUFFIX}"; TASK_SHA="TASK_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/go-task/task/releases/download/v${TASK_VERSION}/${!TASK_ASSET}" "${!TASK_ASSET}" "${!TASK_SHA}"; \
+    extract_binary "${!TASK_ASSET}" task; \
+    \
+    # uv — tar.gz, ships both uv and uvx in the same archive
+    UV_ASSET="UV_ASSET_${ARCH_SUFFIX}"; UV_SHA="UV_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${!UV_ASSET}" "${!UV_ASSET}" "${!UV_SHA}"; \
+    extract_binary "${!UV_ASSET}" uv; \
+    extract_binary "${!UV_ASSET}" uvx; \
+    \
+    # gh — tar.gz
+    GH_ASSET="GH_ASSET_${ARCH_SUFFIX}"; GH_SHA="GH_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/cli/cli/releases/download/v${GH_VERSION}/${!GH_ASSET}" "${!GH_ASSET}" "${!GH_SHA}"; \
+    extract_binary "${!GH_ASSET}" gh; \
+    \
+    # yq — raw binary, no archive to extract
+    YQ_ASSET="YQ_ASSET_${ARCH_SUFFIX}"; YQ_SHA="YQ_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/${!YQ_ASSET}" "${!YQ_ASSET}" "${!YQ_SHA}"; \
+    cp "${!YQ_ASSET}" /opt/cli-tools/bin/yq; \
+    \
+    # cosign — raw binary, no archive to extract
+    COSIGN_ASSET="COSIGN_ASSET_${ARCH_SUFFIX}"; COSIGN_SHA="COSIGN_SHA256_${ARCH_SUFFIX}"; \
+    fetch_verify "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/${!COSIGN_ASSET}" "${!COSIGN_ASSET}" "${!COSIGN_SHA}"; \
+    cp "${!COSIGN_ASSET}" /opt/cli-tools/bin/cosign; \
+    \
     chmod +x /opt/cli-tools/bin/*; \
-    rm -rf /tmp/*
+    rm -rf /tmp/cli-tools/*
 
 # -----------------------------------------------------------------------------
 # Stage: final — the actual dev container image
@@ -293,6 +392,10 @@ ENV BAOBAB_CONFIG_DIR=/usr/local/share/baobab/config
 # pip is deliberately bootstrapped via get-pip.py on fallback paths rather
 # than apt's python3-pip when deadsnakes is used, ensuring unrestricted pip
 # functionality across different base OS versions.
+#
+# NOTE (tracked separately, not part of this change): this still installs
+# whichever python3 apt-cache resolves to, not a build actually verified
+# against PYTHON_MINOR == "3.14". See Change #5 in the roadmap.
 # -----------------------------------------------------------------------------
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -319,15 +422,33 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1 && \
     update-alternatives --install /usr/bin/python3.14 python3.14 /usr/bin/python3 1
 
-# pipx, uv, Poetry — installed once, globally, then made available to every
+# pipx, Poetry — installed once, globally, then made available to every
 # user via /usr/local so Codespaces prebuilds and post-create scripts share
 # a single toolchain install.
+#
+# Poetry is pinned to the exact version config/resolve.sh resolved
+# (POETRY_VERSION) rather than "whatever pipx would install today" —
+# `pipx install poetry` with no version suffix previously ignored
+# POETRY_VERSION entirely, so versions.lock resolving it deterministically
+# had no actual effect on the image. pip's own install-time hash
+# verification against PyPI (Subresource Integrity) is the verification
+# mechanism here — the same reasoning already applied to pnpm below, since
+# neither tool has a compiled, architecture-specific GitHub release binary
+# the way ripgrep/task/gh/etc. do.
+#
+# uv is NOT installed here — it's a static Rust binary with a proper GitHub
+# release per architecture, so it gets the same checksummed cli-tools
+# treatment as ripgrep/task/gh/etc. below (Section 9), honoring its
+# `source: github` in versions.yaml instead of installing it unpinned from
+# PyPI via pipx.
 ENV PIPX_HOME=/usr/local/pipx \
     PIPX_BIN_DIR=/usr/local/bin
-RUN python3 -m pip install --no-cache-dir --break-system-packages pipx && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
+    python3 -m pip install --no-cache-dir --break-system-packages pipx && \
     python3 -m pipx ensurepath && \
-    pipx install --global poetry && \
-    pipx install --global uv && \
+    pipx install --global "poetry==${POETRY_VERSION}" && \
     chmod -R a+rX /usr/local/pipx
 
 # django-tenants and the rest of the BAOBAB application dependencies are
@@ -345,6 +466,16 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages pipx && \
 # a package source the same explicit way everything else here does, so it's
 # replaced with the manual equivalent NodeSource itself documents at
 # https://github.com/nodesource/distributions/wiki/Repository-Manual-Installation.
+#
+# pnpm is pinned to the exact resolved PNPM_VERSION — `corepack prepare
+# pnpm@latest` previously ignored versions.lock entirely, the same gap
+# Poetry had above. npm's own registry-level integrity check (Subresource
+# Integrity, sha512) is what verifies the package on install; there's
+# nothing for this Dockerfile to additionally check by hand, matching
+# versions.yaml's own pnpm.source: npm declaration. yarn has no
+# corresponding entry in versions.yaml at all (no version to pin), so
+# `@stable` is left as-is — not an oversight, there's nothing to pin it to
+# yet.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     . "${BAOBAB_CONFIG_DIR}/versions.lock" && \
@@ -358,7 +489,7 @@ https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
     apt-get update && \
     apt-get install -y --no-install-recommends nodejs && \
     corepack enable && \
-    corepack prepare pnpm@latest --activate && \
+    corepack prepare "pnpm@${PNPM_VERSION}" --activate && \
     corepack prepare yarn@stable --activate
 
 # -----------------------------------------------------------------------------
@@ -430,39 +561,39 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CO
       docker-buildx-plugin
 
 # -----------------------------------------------------------------------------
-# 8. GitHub CLI
-# -----------------------------------------------------------------------------
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-      -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
-    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
-    ARCH=$(dpkg --print-architecture) && \
-    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
-https://cli.github.com/packages stable main" \
-      > /etc/apt/sources.list.d/github-cli.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends gh
-
-# -----------------------------------------------------------------------------
-# 9. Shell productivity utilities
+# 8. Shell productivity & GitHub Actions-adjacent utilities
 #    fzf and tmux come from Ubuntu's own repos (small, stable, low-churn).
-#    ripgrep/fd/bat/eza are copied pre-built from the cli-tools builder stage
-#    for pinned, reproducible versions across Ubuntu releases.
+#    ripgrep/fd/bat/eza/task/yq/gh/cosign/uv are all copied pre-built from
+#    the cli-tools builder stage — checksummed and pinned to the exact
+#    version config/resolve.sh resolved, for reproducibility across Ubuntu
+#    releases. gh in particular used to come from apt (cli.github.com's own
+#    repo) — that's a perfectly legitimate signed channel, but it always
+#    installs "whatever is latest today", which silently ignored
+#    versions.yaml's `github_cli.source: github` and GH_VERSION. Moving it
+#    here makes gh's actual install channel match what versions.yaml has
+#    always declared.
 # -----------------------------------------------------------------------------
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends fzf tmux bash-completion
 
-COPY --from=cli-tools /opt/cli-tools/bin/rg  /usr/local/bin/rg
-COPY --from=cli-tools /opt/cli-tools/bin/fd  /usr/local/bin/fd
-COPY --from=cli-tools /opt/cli-tools/bin/bat /usr/local/bin/bat
-COPY --from=cli-tools /opt/cli-tools/bin/eza /usr/local/bin/eza
-RUN chmod +x /usr/local/bin/rg /usr/local/bin/fd /usr/local/bin/bat /usr/local/bin/eza
+COPY --from=cli-tools /opt/cli-tools/bin/rg     /usr/local/bin/rg
+COPY --from=cli-tools /opt/cli-tools/bin/fd     /usr/local/bin/fd
+COPY --from=cli-tools /opt/cli-tools/bin/bat    /usr/local/bin/bat
+COPY --from=cli-tools /opt/cli-tools/bin/eza    /usr/local/bin/eza
+COPY --from=cli-tools /opt/cli-tools/bin/task   /usr/local/bin/task
+COPY --from=cli-tools /opt/cli-tools/bin/yq     /usr/local/bin/yq
+COPY --from=cli-tools /opt/cli-tools/bin/gh     /usr/local/bin/gh
+COPY --from=cli-tools /opt/cli-tools/bin/cosign /usr/local/bin/cosign
+COPY --from=cli-tools /opt/cli-tools/bin/uv     /usr/local/bin/uv
+COPY --from=cli-tools /opt/cli-tools/bin/uvx    /usr/local/bin/uvx
+RUN chmod +x /usr/local/bin/rg /usr/local/bin/fd /usr/local/bin/bat /usr/local/bin/eza \
+      /usr/local/bin/task /usr/local/bin/yq /usr/local/bin/gh /usr/local/bin/cosign \
+      /usr/local/bin/uv /usr/local/bin/uvx
 
 # -----------------------------------------------------------------------------
-# 10. Non-root user creation (vscode:1000)
+# 9. Non-root user creation (vscode:1000)
 # -----------------------------------------------------------------------------
 # Ubuntu 24.04/26.04 base images ship with a default 'ubuntu' user (UID/GID 1000).
 # Remove it first to free up UID/GID 1000 for 'vscode', avoiding exit code 4.
@@ -477,7 +608,7 @@ RUN if id "ubuntu" &>/dev/null; then userdel -r ubuntu; fi && \
 
 
 # -----------------------------------------------------------------------------
-# 11. Global environment configuration
+# 10. Global environment configuration
 # -----------------------------------------------------------------------------
 ENV PATH="/home/vscode/.local/bin:/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:/usr/local/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
@@ -495,14 +626,14 @@ ENV PATH="/home/vscode/.local/bin:/opt/flutter/bin:/opt/flutter/bin/cache/dart-s
 RUN chown -R vscode:vscode /opt/flutter
 
 # -----------------------------------------------------------------------------
-# 12. Shell enhancements: completions, aliases, colored prompt, history
+# 11. Shell enhancements: completions, aliases, colored prompt, history
 # -----------------------------------------------------------------------------
 COPY --chown=vscode:vscode config/bashrc.d/ /etc/bashrc.d/
 RUN echo '\n# BAOBAB devcontainer shell enhancements\nfor f in /etc/bashrc.d/*.sh; do [ -r "$f" ] && . "$f"; done' \
       >> /etc/bash.bashrc
 
 # -----------------------------------------------------------------------------
-# 13. Install BAOBAB helper commands (used by devcontainer lifecycle hooks and
+# 12. Install BAOBAB helper commands (used by devcontainer lifecycle hooks and
 #     by engineers troubleshooting a container directly). Each command simply
 #     executes its corresponding script from scripts/.
 # -----------------------------------------------------------------------------
@@ -519,7 +650,7 @@ WORKDIR /workspaces
 RUN poetry config virtualenvs.in-project true
 
 # -----------------------------------------------------------------------------
-# 14. Build-time verification
+# 13. Build-time verification
 #
 # Fail the image build itself if the toolchain isn't in the state baobab-
 # verify expects (correct versions on PATH, correct user/UID/GID, passwordless
