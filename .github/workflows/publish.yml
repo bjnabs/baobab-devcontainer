@@ -40,7 +40,7 @@
 #   broken single-arch manifest.
 # ==============================================================================
 
-name: Publish BAOBAB Dev Container
+name: Publish Dev Container
 
 on:
   push:

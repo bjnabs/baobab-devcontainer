@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # summary.sh  (installed in the image as: baobab-summary)
-#
+# 
+# File: scripts/summary.sh
+# 
 # Displays a concise overview of the BAOBAB development environment.
 #
 # Safe to execute at any time. All lookups are best-effort and the script never

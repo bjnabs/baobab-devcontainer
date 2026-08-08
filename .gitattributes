@@ -1,0 +1,61 @@
+# ==============================================================================
+# BAOBAB Enterprise Platform
+# Git Attributes — enforce LF line endings repo-wide
+#
+# WHY THIS FILE EXISTS
+# ------------------------------------------------------------------------------
+# Every shell script in this repository was found committed with CRLF line
+# endings (scripts/verify.sh, scripts/summary.sh, scripts/post-create.sh,
+# scripts/bootstrap.sh, scripts/verify-image.sh, config/resolve.sh, and all
+# of config/bashrc.d/*.sh). This is not cosmetic — it is a real, build-
+# breaking defect:
+#
+#   1. Any of these scripts executed directly via their own shebang line
+#      (e.g. the Dockerfile's `RUN baobab-verify` build-time gate, which
+#      execs /usr/local/bin/baobab-verify directly) fails immediately: the
+#      kernel reads the shebang as "#!/usr/bin/env bash\r", tries to exec
+#      an interpreter literally named "bash\r", and fails with
+#      `env: 'bash\r': No such file or directory`.
+#   2. Even when a script is instead invoked via an explicit `bash
+#      script.sh` (bypassing the shebang), bash's own parser can still
+#      choke on the embedded \r: a trailing \r glues onto whatever token
+#      precedes it (e.g. `for arg in "$@"; do\r` is parsed as the single
+#      malformed token `do\r`, not `do` followed by a newline), producing
+#      a hard syntax error rather than a warning.
+#
+# Without this file, a contributor's editor or OS defaulting to CRLF on
+# save (or a Windows git checkout without core.autocrlf configured) will
+# silently reintroduce the exact same class of bug on the next commit that
+# touches any of these files — Git otherwise preserves whatever line
+# endings are staged, it does not normalize them on its own.
+#
+# `eol=lf` below normalizes line endings to LF both on checkout and on
+# commit, regardless of the committing contributor's local git config.
+# ==============================================================================
+
+# Default: treat everything Git considers text as text, normalize to LF.
+* text=auto eol=lf
+
+# Explicit, for clarity — these are exactly the file types this project
+# generates or hand-edits as text.
+*.sh      text eol=lf
+*.bash    text eol=lf
+*.py      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.toml    text eol=lf
+*.lock    text eol=lf
+.python-version text eol=lf
+Dockerfile      text eol=lf
+
+# Explicitly binary — never let line-ending normalization touch these,
+# even if `* text=auto` above would otherwise guess wrong for a given file.
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.ico     binary
+*.woff    binary
+*.woff2   binary
+*.svg     text eol=lf

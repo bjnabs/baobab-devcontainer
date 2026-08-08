@@ -17,8 +17,6 @@
 #   - bash
 #   - yq v4+
 #   - curl
-#   - git (only for resolving the Poetry installer script's pinned commit —
-#     see the Poetry section below)
 #
 # Usage:
 #   ./config/resolve.sh
@@ -69,9 +67,6 @@ command -v yq >/dev/null 2>&1 \
 command -v curl >/dev/null 2>&1 \
     || die "curl is not installed."
 
-command -v git >/dev/null 2>&1 \
-    || die "git is not installed."
-
 [[ -f "$MANIFEST" ]] \
     || die "Cannot find ${MANIFEST}"
 
@@ -121,18 +116,6 @@ npm_latest_version() {
 
     curl -fsSL "https://registry.npmjs.org/${package}/latest" |
         yq -p json -o json -r '.version'
-}
-
-# Latest commit on a repository's default branch. Used to pin the Poetry
-# installer script (see the Poetry section below) to an exact, immutable
-# commit — the same "pin to a SHA" principle already applied to every
-# GitHub Action in .github/workflows/, just applied here to a plain repo
-# file instead of an Action.
-git_latest_commit() {
-
-    local repo="$1"
-
-    git ls-remote "https://github.com/${repo}.git" HEAD | cut -f1
 }
 
 # ------------------------------------------------------------------------------
@@ -315,32 +298,27 @@ fi
 # ------------------------------------------------------------------------------
 # Poetry
 #
-# versions.yaml declares package_managers.poetry.source as github — but
-# unlike task/yq/uv/gh/cosign, Poetry has no compiled, architecture-specific
-# release binary to download and checksum: it's a pure-Python package,
-# installed the same way regardless of amd64 vs arm64. The zero-trust
-# equivalent here is two-fold:
-#   1. POETRY_VERSION pins the exact PyPI package version to install
-#      (resolved from GitHub tags, since that's Poetry's own source of
-#      truth for version numbers).
-#   2. POETRY_INSTALLER_COMMIT pins the official installer script
-#      (python-poetry/install.python-poetry.org) to an exact commit,
-#      fetched from raw.githubusercontent.com at that commit — the same
-#      "pin to an immutable SHA" principle already used for every GitHub
-#      Action in .github/workflows/, applied here to a plain repo file.
-#      The Dockerfile is expected to invoke the installer with
-#      POETRY_VERSION set explicitly, so pip's own hash-verified install
-#      from PyPI resolves to exactly this version, not whatever the
-#      installer would otherwise default to.
+# Unlike task/yq/uv/gh/cosign, Poetry has no compiled, architecture-specific
+# release binary to download and checksum — it's a pure-Python package,
+# installed the same way regardless of amd64 vs arm64. Same reasoning as
+# pnpm above: only the exact version is pinned here (resolved from GitHub
+# tags, since that's Poetry's own source of truth for version numbers);
+# pip's own install-time hash verification against PyPI (the same
+# Subresource Integrity mechanism, just for Python packages instead of npm
+# ones) is what actually verifies the bytes, once the Dockerfile installs
+# this exact pinned version rather than whatever "poetry" without a version
+# suffix would resolve to on the day of the build.
+#
+# NOTE: an earlier version of this script also resolved a separate pinned
+# commit for python-poetry/install.python-poetry.org, intending to fetch
+# Poetry via its official installer script rather than pip/pipx. That was
+# dropped: pipx installing an exact, pinned version already gets the same
+# verified-install guarantee via pip's own hash checking, with one fewer
+# moving part. versions.yaml's package_managers.poetry.source has been
+# updated from "github" to "pypi" to reflect this.
 # ------------------------------------------------------------------------------
 
 POETRY_VERSION=$(resolve_github '.package_managers.poetry.version' 'python-poetry/poetry')
-
-info "Resolving Poetry installer script commit..."
-POETRY_INSTALLER_COMMIT=$(git_latest_commit "python-poetry/install.python-poetry.org")
-
-[[ -n "$POETRY_INSTALLER_COMMIT" ]] \
-    || die "Could not resolve a commit for python-poetry/install.python-poetry.org."
 
 # ------------------------------------------------------------------------------
 # Checksums: ripgrep, fd, bat, eza (per target architecture)
@@ -497,7 +475,6 @@ export COSIGN_SHA256_ARM64=${COSIGN_SHA256_ARM64}
 export PNPM_VERSION=${PNPM_VERSION}
 
 export POETRY_VERSION=${POETRY_VERSION}
-export POETRY_INSTALLER_COMMIT=${POETRY_INSTALLER_COMMIT}
 
 EOF
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/verify.sh (installed as: baobab-verify)
+# File: scripts/verify.sh (installed as: baobab-verify)
 #
 # Verifies that the BAOBAB development environment is healthy.
 #
@@ -320,6 +320,12 @@ check_required "bat" bat
 check_required "eza" eza
 check_required "fzf" fzf
 check_optional "tmux" tmux
+check_required "Task" task "task --version"
+check_required "yq" yq "yq --version"
+# cosign version's actual output leads with an ASCII-art banner before the
+# GitVersion/GitCommit/etc. fields — filtering to the GitVersion line here
+# avoids run_version_cmd's `head -n1` capturing banner art instead.
+check_required "Cosign" cosign "cosign version | grep GitVersion"
 
 ###############################################################################
 # User

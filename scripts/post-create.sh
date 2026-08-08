@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# post-create.sh
+# File: scripts/post-create.sh
 #
 # Runs inside the running container as the `vscode` user, via Dev Container
 # lifecycle hooks. It is intentionally split into two stages:

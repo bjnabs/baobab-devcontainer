@@ -46,6 +46,16 @@ database:
     major: "17"
     source: "apt"
 
+  redis:
+    # Client tools only (redis-cli via the redis-tools package) — no
+    # server daemon ships in this image. No specific version to pin: the
+    # Dockerfile installs whatever Ubuntu's own default archive currently
+    # has (installed in the same apt-get invocation as postgresql-client,
+    # but from Ubuntu's own repo, not apt.postgresql.org) — same pattern
+    # as jq/fzf/tree/unzip/zip/xz below.
+    version: "system"
+    source: "apt"
+
 package_managers:
 
   uv:
@@ -54,7 +64,11 @@ package_managers:
 
   poetry:
     version: "latest"
-    source: "github"
+    # Pure-Python package, no architecture-specific GitHub release binary —
+    # installed via pipx pinned to this exact resolved version, verified by
+    # pip's own install-time hash check against PyPI. See config/resolve.sh
+    # for the full rationale (same reasoning as pnpm's source: npm, below).
+    source: "pypi"
 
   pnpm:
     version: "latest"

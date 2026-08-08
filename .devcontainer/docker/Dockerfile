@@ -71,6 +71,17 @@
 #
 # CHANGE LOG (this file, most recent first)
 # ------------------------------------------------------------------------------
+# * Fixed the Python version-pinning conditional: the base-archive branch's
+#   `apt-cache show "python${PYTHON_MINOR}" || apt-cache show python3`
+#   check fired almost unconditionally (generic python3 exists on nearly
+#   every Ubuntu release) and then installed generic `python3` rather than
+#   the specific pinned minor version — meaning PYTHON_MINOR was never
+#   actually verified or enforced, just coincidentally matched when
+#   Ubuntu's own default happened to line up. Both branches now install
+#   the specific python${PYTHON_MINOR} package by name. Node's pinning was
+#   re-checked and found to already be correct as-is: NodeSource publishes
+#   a separate apt repository per major version line, so no fix was needed
+#   there.
 # * Wired up every checksum config/resolve.sh now computes, and actually
 #   enforces it: cli-tools and flutter-sdk previously downloaded ripgrep,
 #   fd, bat, eza, and Flutter's amd64 archive WITHOUT ever verifying the
@@ -393,9 +404,20 @@ ENV BAOBAB_CONFIG_DIR=/usr/local/share/baobab/config
 # than apt's python3-pip when deadsnakes is used, ensuring unrestricted pip
 # functionality across different base OS versions.
 #
-# NOTE (tracked separately, not part of this change): this still installs
-# whichever python3 apt-cache resolves to, not a build actually verified
-# against PYTHON_MINOR == "3.14". See Change #5 in the roadmap.
+# CHANGE (2026-08-06): the base-archive branch's condition previously was
+# `apt-cache show "python${PYTHON_MINOR}" || apt-cache show python3` — the
+# `|| apt-cache show python3` made this true almost unconditionally, since
+# the generic python3 metapackage exists on virtually every Ubuntu release
+# regardless of which minor version it currently defaults to. That branch
+# then installed generic `python3` rather than the specific pinned minor
+# version, so this section previously installed "whatever Ubuntu 26.04's
+# default python3 happens to be" and never actually verified or enforced
+# PYTHON_MINOR == "3.14" — the deadsnakes fallback essentially never
+# triggered, and baobab-verify's check for a `python3.14` binary only
+# passed by coincidence, if Ubuntu's default happened to already be 3.14.
+# Both branches now install the SPECIFIC minor-versioned package by name
+# (python${PYTHON_MINOR}, e.g. "python3.14") regardless of which one fires,
+# so PYTHON_MINOR is genuinely what ends up on disk either way.
 # -----------------------------------------------------------------------------
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -403,12 +425,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     PYTHON_MINOR="${PYTHON_VERSION%.*}" && \
     apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates software-properties-common && \
-    if apt-cache show "python${PYTHON_MINOR}" >/dev/null 2>&1 || apt-cache show python3 >/dev/null 2>&1; then \
+    if apt-cache show "python${PYTHON_MINOR}" >/dev/null 2>&1; then \
         apt-get install -y --no-install-recommends \
-            python3 \
-            python3-venv \
-            python3-dev \
-            python3-pip; \
+            "python${PYTHON_MINOR}" \
+            "python${PYTHON_MINOR}-venv" \
+            "python${PYTHON_MINOR}-dev" && \
+        ( apt-cache show "python${PYTHON_MINOR}-pip" >/dev/null 2>&1 \
+            && apt-get install -y --no-install-recommends "python${PYTHON_MINOR}-pip" \
+            || curl -fsSL https://bootstrap.pypa.io/get-pip.py | "python${PYTHON_MINOR}" - --no-cache-dir --break-system-packages ); \
     else \
         add-apt-repository -y ppa:deadsnakes/ppa && \
         apt-get update && \
@@ -418,9 +442,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
             "python${PYTHON_MINOR}-dev" && \
         curl -fsSL https://bootstrap.pypa.io/get-pip.py | "python${PYTHON_MINOR}" - --no-cache-dir --break-system-packages; \
     fi && \
-    update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${PYTHON_MINOR}" 1 || true && \
-    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1 && \
-    update-alternatives --install /usr/bin/python3.14 python3.14 /usr/bin/python3 1
+    update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${PYTHON_MINOR}" 1 && \
+    update-alternatives --install /usr/bin/python  python  /usr/bin/python3 1
 
 # pipx, Poetry — installed once, globally, then made available to every
 # user via /usr/local so Codespaces prebuilds and post-create scripts share

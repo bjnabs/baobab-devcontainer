@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# bootstrap.sh
+# File: scripts/bootstrap.sh
 #
 # One-command onboarding for a new BAOBAB engineer or an automated runner
 # that consumes the published ghcr.io/nabhold/baobab-dev image outside of the
