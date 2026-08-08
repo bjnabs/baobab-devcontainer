@@ -13,19 +13,19 @@ The BAOBAB development container is designed to work consistently across local D
 
 <div class="doc-grid">
 <div class="doc-card">
-<div class="doc-card-icon">:material-laptop:</div>
+<div class="doc-card-icon"><span class="twemoji">{% include ".icons/material/laptop.svg" %}</span></div>
 ### [Running Locally](running-locally.md)
 Set up the container on your workstation with Docker and the required prerequisites.
 </div>
 
 <div class="doc-card">
-<div class="doc-card-icon">:material-cloud:</div>
+<div class="doc-card-icon"><span class="twemoji">{% include ".icons/material/cloud.svg" %}</span></div>
 ### [GitHub Codespaces](github-codespaces.md)
 Launch the same development environment in the cloud with minimal setup.
 </div>
 
 <div class="doc-card">
-<div class="doc-card-icon">:material-microsoft-visual-studio-code:</div>
+<div class="doc-card-icon"><span class="twemoji">{% include ".icons/material/microsoft-visual-studio-code.svg" %}</span></div>
 ### [VS Code Dev Containers](vscode-devcontainers.md)
 Use VS Code’s remote development experience with the BAOBAB toolchain.
 </div>

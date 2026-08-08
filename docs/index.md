@@ -4,9 +4,15 @@ description: >-
   Deterministic, enterprise-grade development container for the BAOBAB
   Enterprise Platform. Identical environments across local machines, Dev
   Containers, GitHub Codespaces, and CI/CD.
+template: home.html
+hide:
+  - navigation
+  - toc
+  - footer
+  - feedback
 ---
 
-<!--   
+<!--
      HERO
      Lives in overrides/partials/hero.html (rendered via the `hero` block
      in overrides/home.html), NOT here — it needs to sit outside
