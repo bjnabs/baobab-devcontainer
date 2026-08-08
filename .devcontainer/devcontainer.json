@@ -1,74 +1,132 @@
 {
   "name": "BAOBAB Enterprise Platform",
-
-  // Pull the published, versioned image from GHCR by default. Developers
-  // working on the image itself can swap this block for the "build" block
-  // below (see README.md § Local image development) to build from source.
-  "image": "ghcr.io/nabhold/baobab-dev:1.0.0",
-
-  // --- Alternative for iterating on the image itself -----------------------
-  // "build": {
-  //   "context": "..",
-  //   "dockerfile": ".devcontainer/docker/Dockerfile",
-  //   "args": { "BUILDKIT_INLINE_CACHE": "1" }
-  // },
-
+  // --------------------------------------------------------------------------
+  // Image source
+  //
+  // ghcr.io/nabhold/baobab-dev:v1.0.0 has NOT been tagged/published yet (the
+  // pre-release audit is still in progress — see config/versions.lock/
+  // Dockerfile audit). Building from source here is the correct state until
+  // that tag exists; pointing "image" at a nonexistent tag would make this
+  // devcontainer unusable.
+  //
+  // Once v1.0.0 is tagged and published by .github/workflows/publish.yml,
+  // switch back: comment out the "build" block below and uncomment this
+  // "image" line (bump the tag to whatever is actually released).
+  // --------------------------------------------------------------------------
+  // "image": "ghcr.io/nabhold/baobab-dev:1.0.0",
+  "build": {
+    // Repo root, not .devcontainer — the Dockerfile COPYs config/ and
+    // scripts/ from the build context root (see Dockerfile.txt sections
+    // 2, 13), so the context must be one level up from .devcontainer/.
+    "context": "..",
+    "dockerfile": ".devcontainer/docker/Dockerfile",
+    // BUILD_DATE/VERSION/REVISION are pure metadata (see Dockerfile.txt
+    // §"Build ARGs") — this build never derives them from git, since
+    // devcontainer.json's "args" field is static JSON, not a shell context.
+    // These placeholders make it obvious in `baobab-summary` / image labels
+    // that this is a local test build, not a CI-published one. BUILD_DATE is
+    // intentionally omitted; it will show "Unknown" via the script's own
+    // fallback, which is the correct signal for a non-CI build.
+    "args": {
+      "VERSION": "0.0.0-local",
+      "REVISION": "local-build"
+    }
+  },
   "runArgs": [
     "--init",
     "--cap-add=SYS_PTRACE",
-    "--security-opt", "seccomp=unconfined"
+    "--security-opt",
+    "seccomp=unconfined"
   ],
-
   "containerEnv": {
     "TZ": "UTC"
   },
-
   "remoteUser": "vscode",
   "updateRemoteUserUID": true,
-
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind,consistency=cached",
-
   // Mount the host's Docker socket so `docker` / `docker compose` inside the
   // container talk to the same daemon Codespaces already provides — this is
-  // why the image ships only the Docker CLI, not a daemon.
+  // why the image ships only the Docker CLI, not a daemon. Mounted at a
+  // shadow path (docker-host.sock) rather than docker.sock directly: the
+  // docker-outside-of-docker feature below is what detects this path and
+  // wires up the group/permissions + symlink to /var/run/docker.sock.
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
   ],
-
   "features": {
+    // moby: false — the image already bakes in docker-ce-cli,
+    // docker-compose-plugin, and docker-buildx-plugin (Dockerfile.txt §7).
+    // This feature is used ONLY for the docker-host.sock -> docker.sock
+    // permission/symlink wiring described above, not for installing Docker
+    // itself.
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "moby": false,
       "dockerDashComposeVersion": "v2"
+    }
+    // github-cli feature intentionally removed: `gh` is already installed
+    // in the image via apt (Dockerfile.txt §8). Re-declaring it here only
+    // adds provisioning time on every Codespace create for no benefit, and
+    // risks silently installing a newer/unpinned `gh` than the one
+    // config/versions.lock resolved for the image build.
+  },
+  "forwardPorts": [
+    8000,
+    8001,
+    3000,
+    5432,
+    6379,
+    9000,
+    9001,
+    80,
+    443
+  ],
+  "portsAttributes": {
+    "8000": {
+      "label": "Django / DRF",
+      "onAutoForward": "notify"
     },
-    "ghcr.io/devcontainers/features/github-cli:1": {
-      "installDirectlyFromGitHubRelease": false
+    "8001": {
+      "label": "FastAPI",
+      "onAutoForward": "notify"
+    },
+    "3000": {
+      "label": "Next.js",
+      "onAutoForward": "openPreview"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "9000": {
+      "label": "MinIO API",
+      "onAutoForward": "silent"
+    },
+    "9001": {
+      "label": "MinIO Console",
+      "onAutoForward": "notify"
+    },
+    "80": {
+      "label": "Traefik / Nginx (HTTP)",
+      "onAutoForward": "silent"
+    },
+    "443": {
+      "label": "Traefik / Nginx (HTTPS)",
+      "onAutoForward": "silent"
     }
   },
-
-  "forwardPorts": [8000, 8001, 3000, 5432, 6379, 9000, 9001, 80, 443],
-  "portsAttributes": {
-    "8000": { "label": "Django / DRF", "onAutoForward": "notify" },
-    "8001": { "label": "FastAPI", "onAutoForward": "notify" },
-    "3000": { "label": "Next.js", "onAutoForward": "openPreview" },
-    "5432": { "label": "PostgreSQL", "onAutoForward": "silent" },
-    "6379": { "label": "Redis", "onAutoForward": "silent" },
-    "9000": { "label": "MinIO API", "onAutoForward": "silent" },
-    "9001": { "label": "MinIO Console", "onAutoForward": "notify" },
-    "80":   { "label": "Traefik / Nginx (HTTP)", "onAutoForward": "silent" },
-    "443":  { "label": "Traefik / Nginx (HTTPS)", "onAutoForward": "silent" }
-  },
-
   "onCreateCommand": "bash scripts/post-create.sh --stage=on-create",
   "postCreateCommand": "bash scripts/post-create.sh --stage=post-create",
   "postStartCommand": "baobab-summary",
-
   "customizations": {
     "vscode": {
       "extensions": [
         "eamodio.gitlens",
         "mhutchie.git-graph",
-
         "ms-python.python",
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
@@ -76,33 +134,29 @@
         "ms-python.isort",
         "ms-python.mypy-type-checker",
         "batisteo.vscode-django",
-
         "ms-azuretools.vscode-docker",
         "ms-vscode-remote.remote-containers",
-
         "dart-code.flutter",
         "dart-code.dart-code",
-
         "github.vscode-github-actions",
         "github.vscode-pull-request-github",
-
         "davidanson.vscode-markdownlint",
         "redhat.vscode-yaml",
-
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss",
-
         "editorconfig.editorconfig",
         "tamasfe.even-better-toml",
         "mikestead.dotenv"
       ],
       "settings": {
         "editor.formatOnSave": true,
-        "editor.rulers": [88, 120],
+        "editor.rulers": [
+          88,
+          120
+        ],
         "files.trimTrailingWhitespace": true,
         "files.insertFinalNewline": true,
-
         "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
         "python.testing.pytestEnabled": true,
         "python.analysis.typeCheckingMode": "basic",
@@ -113,33 +167,37 @@
             "source.fixAll.ruff": "explicit"
           }
         },
-
-        "ruff.lint.args": ["--config=pyproject.toml"],
-        "mypy-type-checker.args": ["--config-file=pyproject.toml"],
-
+        "ruff.lint.args": [
+          "--config=pyproject.toml"
+        ],
+        "mypy-type-checker.args": [
+          "--config-file=pyproject.toml"
+        ],
         "[dart]": {
           "editor.formatOnSave": true,
           "editor.formatOnType": true,
-          "editor.rulers": [80],
+          "editor.rulers": [
+            80
+          ],
           "editor.selectionHighlight": false,
           "editor.suggestSelection": "first",
           "editor.tabCompletion": "onlySnippet",
           "editor.wordBasedSuggestions": "off"
         },
-
         "[javascript][typescript][typescriptreact][javascriptreact]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode"
         },
-
         "[markdown]": {
           "editor.wordWrap": "on",
-          "editor.quickSuggestions": { "comments": "off", "strings": "off", "other": "off" }
+          "editor.quickSuggestions": {
+            "comments": "off",
+            "strings": "off",
+            "other": "off"
+          }
         },
-
         "[yaml]": {
           "editor.defaultFormatter": "redhat.vscode-yaml"
         },
-
         "docker.dockerPath": "/usr/bin/docker",
         "terminal.integrated.defaultProfile.linux": "bash"
       }
